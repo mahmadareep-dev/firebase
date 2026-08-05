@@ -5,18 +5,14 @@ abstract interface class SearchRemoteDataSource<T> {
     required String collection,
     required String searchField,
     required String query,
-    required T Function(
-        DocumentSnapshot<Map<String, dynamic>> document,
-        ) fromFirestore,
+    required T Function(DocumentSnapshot<Map<String, dynamic>> document)
+    fromFirestore,
     int limit = 20,
   });
 }
 
-class SearchRemoteDataSourceImpl<T>
-    implements SearchRemoteDataSource<T> {
-  SearchRemoteDataSourceImpl(
-      this._firestore,
-      );
+class SearchRemoteDataSourceImpl<T> implements SearchRemoteDataSource<T> {
+  SearchRemoteDataSourceImpl(this._firestore);
 
   final FirebaseFirestore _firestore;
 
@@ -25,9 +21,8 @@ class SearchRemoteDataSourceImpl<T>
     required String collection,
     required String searchField,
     required String query,
-    required T Function(
-        DocumentSnapshot<Map<String, dynamic>> document,
-        ) fromFirestore,
+    required T Function(DocumentSnapshot<Map<String, dynamic>> document)
+    fromFirestore,
     int limit = 20,
   }) async {
     if (query.trim().isEmpty) {
@@ -42,8 +37,6 @@ class SearchRemoteDataSourceImpl<T>
         .limit(limit)
         .get();
 
-    return snapshot.docs
-        .map(fromFirestore)
-        .toList();
+    return snapshot.docs.map(fromFirestore).toList();
   }
 }

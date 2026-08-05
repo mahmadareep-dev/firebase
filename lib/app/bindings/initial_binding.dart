@@ -45,6 +45,11 @@ import '../../features/file_storage/domain/usecases/get_download_url_usecase.dar
 import '../../features/file_storage/domain/usecases/list_files_usecase.dart';
 import '../../features/file_storage/domain/usecases/upload_file_usecase.dart';
 import '../../features/file_storage/presentation/controllers/file_storage_controller.dart';
+import '../../features/firestore_query/data/datasources/firestore_query_remote_data_source.dart';
+import '../../features/firestore_query/data/repositories/firestore_query_repository_impl.dart';
+import '../../features/firestore_query/domain/repositories/firestore_query_repository.dart';
+import '../../features/firestore_query/domain/usecases/execute_query_usecase.dart';
+import '../../features/firestore_query/domain/usecases/watch_query_usecase.dart';
 import '../../features/notifications/data/datasources/notification_remote_data_source.dart';
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
 import '../../features/notifications/domain/repositories/notification_repository.dart';
@@ -57,6 +62,7 @@ import '../../features/notifications/domain/usecases/subscribe_topic_usecase.dar
 import '../../features/notifications/domain/usecases/unsubscribe_topic_usecase.dart';
 import '../../features/notifications/presentation/controllers/notification_controller.dart';
 import '../../features/posts/data/datasources/post_remote_data_source.dart';
+import '../../features/posts/data/models/post_model.dart';
 import '../../features/posts/data/repositories/post_repository_impl.dart';
 import '../../features/posts/domain/repositories/post_repository.dart';
 import '../../features/posts/domain/usecases/add_post_usecase.dart';
@@ -75,6 +81,11 @@ import '../../features/profile/domain/usecases/get_user_profile_usecase.dart';
 import '../../features/profile/domain/usecases/save_user_profile_usecase.dart';
 import '../../features/profile/domain/usecases/update_profile_usecase.dart';
 import '../../features/profile/presentation/controllers/profile_controller.dart';
+import '../../features/search/data/datasources/search_remote_data_source.dart';
+import '../../features/search/data/repositories/search_repository_impl.dart';
+import '../../features/search/domain/repositories/search_repository.dart';
+import '../../features/search/domain/usecases/search_usecase.dart';
+import '../../features/search/presentation/controllers/search_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -141,7 +152,19 @@ class InitialBinding extends Bindings {
     Get.lazyPut<ConnectivityRemoteDataSource>(
       () => ConnectivityRemoteDataSourceImpl(Get.find()),
     );
+    Get.lazyPut<SearchRemoteDataSource<PostModel>>(
+          () =>
+          SearchRemoteDataSourceImpl<PostModel>(Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
 
+    Get.lazyPut<FirestoreQueryRemoteDataSource>(
+          () =>
+          FirestoreQueryRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+      fenix: true,
+    );
     /// 3. REPOSITORIES
     Get.lazyPut<AuthRepository>(
       () => AuthRepositoryImpl(
@@ -172,7 +195,23 @@ class InitialBinding extends Bindings {
     Get.lazyPut<ConnectivityRepository>(
       () => ConnectivityRepositoryImpl(Get.find()),
     );
-
+    Get.lazyPut<SearchRepository<PostModel>>(
+          () =>
+          SearchRepositoryImpl<PostModel>(
+            remoteDataSource: Get.find<SearchRemoteDataSource<PostModel>>(),
+            collection: 'posts',
+            searchField: 'title',
+            fromFirestore: PostModel.fromFirestore,
+          ),
+      fenix: true,
+    );
+    Get.lazyPut<FirestoreQueryRepository>(
+          () =>
+          FirestoreQueryRepositoryImpl(
+            remoteDataSource: Get.find(),
+          ),
+      fenix: true,
+    );
     /// 4. AUTH USE CASES
     Get.lazyPut<SignInWithEmailUseCase>(
       () => SignInWithEmailUseCase(Get.find<AuthRepository>()),
@@ -316,8 +355,37 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => WatchConnectionUseCase(Get.find()));
 
     /// 10. SEARCH USECASES
+    Get.lazyPut<SearchUseCase<PostModel>>(
+          () =>
+          SearchUseCase<PostModel>(
+            Get.find<SearchRepository<PostModel>>(),
+          ),
+      fenix: true,
+    );
 
-    /// 11. CONTROLLERS
+
+    /// 11. QUERY USECASES
+    Get.lazyPut(() =>
+        ExecuteQueryUseCase(Get.find<FirestoreQueryRepository>(),
+        ),
+      fenix: true,
+    );
+    Get.lazyPut(
+          () =>
+          WatchQueryUseCase(
+            Get.find<FirestoreQueryRepository>(),
+          ),
+      fenix: true,
+    );
+    Get.lazyPut(
+          () =>
+          WatchQueryUseCase(
+            Get.find<FirestoreQueryRepository>(),
+          ),
+      fenix: true,
+    );
+
+    /// 12. CONTROLLERS
     Get.lazyPut<AuthController>(
       () => AuthController(
         signInWithEmailUseCase: Get.find<SignInWithEmailUseCase>(),
@@ -411,6 +479,13 @@ class InitialBinding extends Bindings {
         listFilesUseCase: Get.find(),
         filePickerService: Get.find(),
       ),
+      fenix: true,
+    );
+    Get.lazyPut<SearchController<PostModel>>(
+          () =>
+          SearchController<PostModel>(
+            searchUseCase: Get.find<SearchUseCase<PostModel>>(),
+          ),
       fenix: true,
     );
   }

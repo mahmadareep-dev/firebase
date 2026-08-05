@@ -1,0 +1,9 @@
+export 'data/builders/firestore_query_builder.dart';
+export 'data/datasources/firestore_query_remote_data_source.dart';
+export 'data/repositories/firestore_query_repository_impl.dart';
+export 'domain/entities/firestore_query_params.dart';
+export 'domain/entities/query_filter.dart';
+export 'domain/entities/query_order.dart';
+export 'domain/repositories/firestore_query_repository.dart';
+export 'domain/usecases/execute_query_usecase.dart';
+export 'domain/usecases/watch_query_usecase.dart';

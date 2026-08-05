@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../core/errors/failure.dart';
 import '../../../../core/errors/result.dart';
 import '../../domain/entities/search_params.dart';
@@ -22,7 +24,8 @@ class SearchRepositoryImpl<T> implements SearchRepository<T> {
   final String searchField;
 
   /// Converts Firestore document into Model
-  final T Function(dynamic document) fromFirestore;
+  final T Function(DocumentSnapshot<Map<String, dynamic>> document)
+  fromFirestore;
 
   @override
   Future<Result<SearchResultEntity<T>>> search(SearchParams params) async {

@@ -8,9 +8,7 @@ class SearchResultModel<T> extends SearchResultEntity<T> {
     super.totalCount,
   });
 
-  factory SearchResultModel.fromEntity(
-      SearchResultEntity<T> entity,
-      ) {
+  factory SearchResultModel.fromEntity(SearchResultEntity<T> entity) {
     return SearchResultModel(
       items: entity.items,
       query: entity.query,

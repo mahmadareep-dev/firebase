@@ -21,11 +21,9 @@ class LoginScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            /// ============================
             /// Header
-            /// ============================
             SizedBox(
-              height: 240.h,
+              height: 200.h,
               child: Stack(
                 children: [
                   Positioned(
@@ -52,6 +50,7 @@ class LoginScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    SizedBox(height: 10.h),
                     AppTextField(
                       controller: controller.emailController,
                       label: "Email",

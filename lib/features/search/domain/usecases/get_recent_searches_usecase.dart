@@ -1,9 +1,7 @@
 import '../repositories/search_repository.dart';
 
 class GetRecentSearchesUseCase<T> {
-  const GetRecentSearchesUseCase(
-      this._repository,
-      );
+  const GetRecentSearchesUseCase(this._repository);
 
   final SearchRepository<T> _repository;
 

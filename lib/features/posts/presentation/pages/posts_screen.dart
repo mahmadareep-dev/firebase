@@ -10,12 +10,17 @@ import '../widgets/post_list_widget.dart';
 
 class PostsScreen extends GetView<PostController> {
   const PostsScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Firestore CRUD'),
         actions: [
+          // IconButton(
+          //   icon: const Icon(Icons.search),
+          //   onPressed: (){}
+          // ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

@@ -44,7 +44,15 @@ import '../../features/file_storage/domain/usecases/delete_file_usecase.dart';
 import '../../features/file_storage/domain/usecases/get_download_url_usecase.dart';
 import '../../features/file_storage/domain/usecases/list_files_usecase.dart';
 import '../../features/file_storage/domain/usecases/upload_file_usecase.dart';
-import '../../features/file_storage/presentation/controllers/file_storage_controller.dart';
+import '../../features/firestore_batch/data/datasources/firestore_batch_remote_data_source.dart';
+import '../../features/firestore_batch/data/repositories/firestore_batch_repository_impl.dart';
+import '../../features/firestore_batch/domain/repositories/firestore_batch_repository.dart';
+import '../../features/firestore_batch/domain/usecases/commit_batch_usecase.dart';
+import '../../features/firestore_batch/domain/usecases/run_transaction_usecase.dart';
+import '../../features/firestore_pagination/data/datasources/firestore_pagination_remote_data_source.dart';
+import '../../features/firestore_pagination/data/repositories/firestore_pagination_repository_impl.dart';
+import '../../features/firestore_pagination/domain/repositories/firestore_pagination_repository.dart';
+import '../../features/firestore_pagination/domain/usecases/load_page_usecase.dart';
 import '../../features/firestore_query/data/datasources/firestore_query_remote_data_source.dart';
 import '../../features/firestore_query/data/repositories/firestore_query_repository_impl.dart';
 import '../../features/firestore_query/domain/repositories/firestore_query_repository.dart';
@@ -160,11 +168,15 @@ class InitialBinding extends Bindings {
 
     Get.lazyPut<FirestoreQueryRemoteDataSource>(
           () =>
-          FirestoreQueryRemoteDataSourceImpl(
-            Get.find<FirebaseFirestore>(),
-          ),
+          FirestoreQueryRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
       fenix: true,
     );
+    Get.lazyPut<FirestoreBatchRemoteDataSource>(
+          () =>
+          FirestoreBatchRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+
     /// 3. REPOSITORIES
     Get.lazyPut<AuthRepository>(
       () => AuthRepositoryImpl(
@@ -206,12 +218,14 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
     Get.lazyPut<FirestoreQueryRepository>(
-          () =>
-          FirestoreQueryRepositoryImpl(
-            remoteDataSource: Get.find(),
-          ),
+          () => FirestoreQueryRepositoryImpl(remoteDataSource: Get.find()),
       fenix: true,
     );
+    Get.lazyPut<FirestoreBatchRepository>(
+          () => FirestoreBatchRepositoryImpl(remoteDataSource: Get.find()),
+      fenix: true,
+    );
+
     /// 4. AUTH USE CASES
     Get.lazyPut<SignInWithEmailUseCase>(
       () => SignInWithEmailUseCase(Get.find<AuthRepository>()),
@@ -357,35 +371,36 @@ class InitialBinding extends Bindings {
     /// 10. SEARCH USECASES
     Get.lazyPut<SearchUseCase<PostModel>>(
           () =>
-          SearchUseCase<PostModel>(
-            Get.find<SearchRepository<PostModel>>(),
-          ),
+          SearchUseCase<PostModel>(Get.find<SearchRepository<PostModel>>()),
       fenix: true,
     );
-
 
     /// 11. QUERY USECASES
-    Get.lazyPut(() =>
-        ExecuteQueryUseCase(Get.find<FirestoreQueryRepository>(),
-        ),
+    Get.lazyPut(
+          () => ExecuteQueryUseCase(Get.find<FirestoreQueryRepository>()),
       fenix: true,
     );
     Get.lazyPut(
-          () =>
-          WatchQueryUseCase(
-            Get.find<FirestoreQueryRepository>(),
-          ),
+          () => WatchQueryUseCase(Get.find<FirestoreQueryRepository>()),
       fenix: true,
     );
     Get.lazyPut(
-          () =>
-          WatchQueryUseCase(
-            Get.find<FirestoreQueryRepository>(),
-          ),
+          () => WatchQueryUseCase(Get.find<FirestoreQueryRepository>()),
       fenix: true,
     );
 
-    /// 12. CONTROLLERS
+    /// 12. BATCH USECASES
+    Get.lazyPut(
+          () => CommitBatchUseCase(Get.find<FirestoreBatchRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () => RunTransactionUseCase(Get.find<FirestoreBatchRepository>()),
+      fenix: true,
+    );
+
+    /// 13. CONTROLLERS
     Get.lazyPut<AuthController>(
       () => AuthController(
         signInWithEmailUseCase: Get.find<SignInWithEmailUseCase>(),
@@ -471,16 +486,7 @@ class InitialBinding extends Bindings {
       ),
       fenix: true,
     );
-    Get.lazyPut<FileStorageController>(
-      () => FileStorageController(
-        uploadFileUseCase: Get.find(),
-        deleteFileUseCase: Get.find(),
-        getDownloadUrlUseCase: Get.find(),
-        listFilesUseCase: Get.find(),
-        filePickerService: Get.find(),
-      ),
-      fenix: true,
-    );
+
     Get.lazyPut<SearchController<PostModel>>(
           () =>
           SearchController<PostModel>(
@@ -488,5 +494,29 @@ class InitialBinding extends Bindings {
           ),
       fenix: true,
     );
+
+    /// 15. Firestore Pagination
+    Get.lazyPut<FirestorePaginationRemoteDataSource>(
+          () =>
+          FirestorePaginationRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+    );
+
+    Get.lazyPut<FirestorePaginationRepository>(
+          () =>
+          FirestorePaginationRepositoryImpl(
+            Get.find<FirestorePaginationRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          LoadPageUseCase(
+            Get.find<FirestorePaginationRepository>(),
+          ),
+    );
   }
 }
+
+

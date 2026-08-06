@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../file_storage/presentation/controllers/file_storage_controller.dart';
 import '../controllers/profile_controller.dart';
 
 class EditProfileScreen extends GetView<ProfileController> {
-  EditProfileScreen({super.key});
-
-  final FileStorageController storageController =
-      Get.find<FileStorageController>();
+  const EditProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +37,7 @@ class EditProfileScreen extends GetView<ProfileController> {
                         : null,
                   ),
 
-                  if (storageController.isSaving.value)
+                  if (controller.isUploadingImage.value)
                     Container(
                       width: 110,
                       height: 110,
@@ -73,7 +69,7 @@ class EditProfileScreen extends GetView<ProfileController> {
                     right: 0,
                     bottom: 0,
                     child: InkWell(
-                      onTap: storageController.isSaving.value
+                      onTap: controller.isUploadingImage.value
                           ? null
                           : controller.uploadProfileImage,
                       borderRadius: BorderRadius.circular(30),
@@ -162,7 +158,7 @@ class EditProfileScreen extends GetView<ProfileController> {
                 child: ElevatedButton(
                   onPressed:
                       controller.isUpdating.value ||
-                          storageController.isSaving.value
+                          controller.isUploadingImage.value
                       ? null
                       : controller.updateProfile,
                   child: controller.isUpdating.value

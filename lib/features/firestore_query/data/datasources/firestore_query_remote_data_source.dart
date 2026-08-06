@@ -28,7 +28,17 @@ class FirestoreQueryRemoteDataSourceImpl
       params.collection,
     );
 
-    /// Filters
+    query = _applyFilters(query, params);
+    query = _applySorting(query, params);
+    query = _applyPagination(query, params);
+
+    return query;
+  }
+
+  Query<Map<String, dynamic>> _applyFilters(
+    Query<Map<String, dynamic>> query,
+    FirestoreQueryParams params,
+  ) {
     for (final filter in params.filters) {
       switch (filter.operator) {
         case QueryOperator.equalTo:
@@ -80,19 +90,40 @@ class FirestoreQueryRemoteDataSourceImpl
       }
     }
 
-    /// Order By
+    return query;
+  }
+
+  Query<Map<String, dynamic>> _applySorting(
+    Query<Map<String, dynamic>> query,
+    FirestoreQueryParams params,
+  ) {
     for (final order in params.orders) {
       query = query.orderBy(order.field, descending: order.descending);
     }
 
-    /// Limit
+    return query;
+  }
+
+  Query<Map<String, dynamic>> _applyPagination(
+    Query<Map<String, dynamic>> query,
+    FirestoreQueryParams params,
+  ) {
     if (params.limit != null) {
-      query = query.limit(params.limit!);
+      query = params.limitToLast
+          ? query.limitToLast(params.limit!)
+          : query.limit(params.limit!);
     }
 
-    /// Pagination
     if (params.startAfter != null) {
       query = query.startAfterDocument(params.startAfter!);
+    }
+
+    if (params.startAt != null) {
+      query = query.startAtDocument(params.startAt!);
+    }
+
+    if (params.endAt != null) {
+      query = query.endAtDocument(params.endAt!);
     }
 
     if (params.endBefore != null) {
@@ -108,9 +139,13 @@ class FirestoreQueryRemoteDataSourceImpl
     required T Function(DocumentSnapshot<Map<String, dynamic>> document)
     fromFirestore,
   }) async {
-    final snapshot = await _buildQuery(params).get();
+    try {
+      final snapshot = await _buildQuery(params).get();
 
-    return snapshot.docs.map(fromFirestore).toList();
+      return snapshot.docs.map(fromFirestore).toList();
+    } on FirebaseException catch (e) {
+      throw Exception(e.message ?? e.code);
+    }
   }
 
   @override
@@ -118,9 +153,13 @@ class FirestoreQueryRemoteDataSourceImpl
     required FirestoreQueryParams params,
     required T Function(DocumentSnapshot<Map<String, dynamic>> document)
     fromFirestore,
-  }) {
-    return _buildQuery(
-      params,
-    ).snapshots().map((snapshot) => snapshot.docs.map(fromFirestore).toList());
+  }) async* {
+    try {
+      await for (final snapshot in _buildQuery(params).snapshots()) {
+        yield snapshot.docs.map(fromFirestore).toList();
+      }
+    } on FirebaseException catch (e) {
+      throw Exception(e.message ?? e.code);
+    }
   }
 }

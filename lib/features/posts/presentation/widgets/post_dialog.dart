@@ -30,7 +30,7 @@ class PostDialog extends GetView<PostController> {
           () => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (controller.fileStorageController.isSaving.value)
+              if (controller.isUploadingImage.value)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16),
                   child: LinearProgressIndicator(),
@@ -72,7 +72,7 @@ class PostDialog extends GetView<PostController> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: controller.fileStorageController.isSaving.value
+                    onPressed: controller.isUploadingImage.value
                         ? null
                         : controller.pickPostImage,
                     icon: const Icon(Icons.image),
@@ -103,8 +103,7 @@ class PostDialog extends GetView<PostController> {
         Obx(
           () => ElevatedButton(
             onPressed:
-                controller.isSaving.value ||
-                    controller.fileStorageController.isSaving.value
+                controller.isSaving.value || controller.isUploadingImage.value
                 ? null
                 : () {
                     if (post == null) {

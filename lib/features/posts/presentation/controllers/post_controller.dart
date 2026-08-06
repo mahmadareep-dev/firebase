@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/base/base_crud_controller.dart';
+import '../../../../core/services/file_picker/file_picker_service.dart';
 import '../../../../core/services/snackbar/snackbar_service.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../file_storage/presentation/controllers/file_storage_controller.dart';
+import '../../../file_storage/data/builders/firebase_storage_builder.dart';
 import '../../domain/entities/post_entity.dart';
 import '../../domain/usecases/add_post_usecase.dart';
 import '../../domain/usecases/delete_post_usecase.dart';
@@ -32,12 +33,12 @@ class PostController extends BaseCrudController {
 
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
-  final FileStorageController fileStorageController = Get.find();
-
-  final Rx<File?> selectedImage = Rx<File?>(null);
 
   final RxString imageUrl = ''.obs;
   final posts = <PostEntity>[].obs;
+
+  final FirebaseStorageBuilder _storage = FirebaseStorageBuilder();
+  final RxBool isUploadingImage = false.obs;
 
   StreamSubscription<List<PostEntity>>? _watchSubscription;
 
@@ -218,16 +219,35 @@ class PostController extends BaseCrudController {
   }
 
   Future<void> pickPostImage() async {
-    final success = await fileStorageController.pickAndUploadImage(
-      path: 'posts/${DateTime.now().millisecondsSinceEpoch}',
-    );
+    final File? file = await Get.find<FilePickerService>()
+        .pickImageFromGallery();
 
-    if (!success) {
-      showError(fileStorageController.errorMessage.value);
+    if (file == null) {
       return;
     }
 
-    imageUrl.value = fileStorageController.downloadUrl.value;
+    isUploadingImage.value = true;
+
+    try {
+      final uploadResult = await _storage.uploadImage(
+        image: file,
+        path: 'posts',
+        fileName: '${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      uploadResult.when(
+        success: (uploadedFile) {
+          imageUrl.value = uploadedFile.downloadUrl;
+
+          showSuccess('Image uploaded successfully.');
+        },
+        failure: (failure) {
+          showError(failure.message);
+        },
+      );
+    } finally {
+      isUploadingImage.value = false;
+    }
   }
 
   void fillFields(PostEntity post) {
@@ -240,9 +260,5 @@ class PostController extends BaseCrudController {
     descriptionController.clear();
 
     imageUrl.value = '';
-
-    selectedImage.value = null;
-
-    fileStorageController.clear();
   }
 }

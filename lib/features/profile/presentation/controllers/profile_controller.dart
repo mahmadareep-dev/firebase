@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/services/file_picker/file_picker_service.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
-import '../../../file_storage/presentation/controllers/file_storage_controller.dart';
+import '../../../file_storage/file_storage.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/get_user_profile_usecase.dart';
 import '../../domain/usecases/update_profile_usecase.dart';
@@ -22,7 +22,6 @@ class ProfileController extends BaseController {
     required this.updateProfileUseCase,
   });
 
-  final FileStorageController _fileStorageController = Get.find();
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
@@ -31,8 +30,9 @@ class ProfileController extends BaseController {
   final selectedRole = 'user'.obs;
   final Rx<File?> selectedProfileImage = Rx<File?>(null);
   final isUpdating = false.obs;
+  final isUploadingImage = false.obs;
   final Rxn<UserEntity> user = Rxn<UserEntity>();
-
+  final FirebaseStorageBuilder storage = FirebaseStorageBuilder();
   @override
   void onInit() {
     super.onInit();
@@ -173,64 +173,65 @@ class ProfileController extends BaseController {
 
     if (file == null) return;
 
-    // Show selected image immediately
     selectedProfileImage.value = file;
+    isUploadingImage.value = true;
 
-    final success = await _fileStorageController.uploadFile(
-      file: file,
-      path: 'users/${firebaseUser.uid}/profile',
-      fileName: 'profile.jpg',
-    );
-
-    if (!success) {
-      selectedProfileImage.value = null;
-
-      Get.snackbar(
-        'Error',
-        _fileStorageController.errorMessage.value,
-        snackPosition: SnackPosition.BOTTOM,
+    try {
+      final uploadResult = await storage.uploadFile(
+        file: file,
+        path: 'users/${firebaseUser.uid}/profile',
+        fileName: 'profile.jpg',
       );
 
-      return;
+      await uploadResult.when(
+        success: (uploadedFile) async {
+          final updatedUser = UserEntity(
+            uid: firebaseUser.uid,
+            name: nameController.text.trim(),
+            email: emailController.text.trim(),
+            phone: phoneController.text.trim(),
+            photoUrl: uploadedFile.downloadUrl,
+            role: selectedRole.value,
+            createdAt: user.value?.createdAt,
+            updatedAt: DateTime.now(),
+          );
+
+          final result = await updateProfileUseCase(updatedUser);
+
+          result.when(
+            success: (_) async {
+              selectedProfileImage.value = null;
+
+              await loadProfile();
+
+              Get.snackbar(
+                'Success',
+                'Profile image updated successfully',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            failure: (failure) {
+              Get.snackbar(
+                'Error',
+                failure.message,
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+          );
+        },
+        failure: (failure) async {
+          selectedProfileImage.value = null;
+
+          Get.snackbar(
+            'Error',
+            failure.message,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        },
+      );
+    } finally {
+      isUploadingImage.value = false;
     }
-
-    final imageUrl = _fileStorageController.downloadUrl.value;
-
-    final updatedUser = UserEntity(
-      uid: firebaseUser.uid,
-      name: nameController.text.trim(),
-      email: emailController.text.trim(),
-      phone: phoneController.text.trim(),
-      photoUrl: imageUrl,
-      role: selectedRole.value,
-      createdAt: user.value?.createdAt,
-      updatedAt: DateTime.now(),
-    );
-
-    final result = await updateProfileUseCase(updatedUser);
-
-    result.when(
-      success: (_) async {
-        selectedProfileImage.value = null;
-
-        await loadProfile();
-
-        Get.snackbar(
-          'Success',
-          'Profile image updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      },
-      failure: (failure) {
-        selectedProfileImage.value = null;
-
-        Get.snackbar(
-          'Error',
-          failure.message,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      },
-    );
   }
 
   void clearProfile() {

@@ -34,7 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home',), centerTitle: true,
+        title: const Text('Home'),
+        centerTitle: true,
         actions: [
           IconButton(
             onPressed: authController.logout,

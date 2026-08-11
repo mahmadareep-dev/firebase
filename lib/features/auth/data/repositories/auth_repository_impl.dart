@@ -64,6 +64,41 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future reAuthenticateWithGoogle() {
+    return _handleFirebaseCall(
+      () => remoteDataSource.reAuthenticateWithGoogle(),
+    );
+  }
+
+  @override
+  Future<void> sendPhoneReauthOtp({
+    required String phoneNumber,
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String message) onVerificationFailed,
+    required void Function() onAutoVerified,
+  }) {
+    return remoteDataSource.sendPhoneReauthOtp(
+      phoneNumber: phoneNumber,
+      onCodeSent: onCodeSent,
+      onVerificationFailed: onVerificationFailed,
+      onAutoVerified: onAutoVerified,
+    );
+  }
+
+  @override
+  Future<void> reAuthenticateWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+  }) {
+    return _handleFirebaseCall(
+      () => remoteDataSource.reAuthenticateWithPhoneOtp(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      ),
+    );
+  }
+
+  @override
   Future<void> deleteAccount() {
     return _handleFirebaseCall(() => remoteDataSource.deleteAccount());
   }

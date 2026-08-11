@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
@@ -20,10 +21,12 @@ import '../../features/auth/domain/usecases/complete_profile_usecase.dart';
 import '../../features/auth/domain/usecases/delete_account_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/observe_auth_state_usecase.dart';
+import '../../features/auth/domain/usecases/reauthenticate_with_phone_otp_usecase.dart';
 import '../../features/auth/domain/usecases/reload_current_user_usecase.dart';
 import '../../features/auth/domain/usecases/resend_verification_email_usecase.dart';
 import '../../features/auth/domain/usecases/send_password_reset_email_usecase.dart';
 import '../../features/auth/domain/usecases/send_phone_otp_usecase.dart';
+import '../../features/auth/domain/usecases/send_phone_reauth_otp_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_with_email_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_with_email_usecase.dart';
@@ -44,11 +47,69 @@ import '../../features/file_storage/domain/usecases/delete_file_usecase.dart';
 import '../../features/file_storage/domain/usecases/get_download_url_usecase.dart';
 import '../../features/file_storage/domain/usecases/list_files_usecase.dart';
 import '../../features/file_storage/domain/usecases/upload_file_usecase.dart';
+import '../../features/firebase_analytics/data/datasources/analytics_remote_data_source.dart';
+import '../../features/firebase_analytics/data/repositories/firebase_analytics_repository_impl.dart';
+import '../../features/firebase_analytics/domain/repositories/firebase_analytics_repository.dart';
+import '../../features/firebase_analytics/domain/usecases/log_event_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/log_login_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/log_screen_view_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/log_signup_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/reset_analytics_data_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/set_collection_enabled_usecase.dart';
+import '../../features/firebase_analytics/domain/usecases/set_user_property_usecase.dart';
+import '../../features/firebase_app_check/data/datasources/app_check_remote_data_source.dart';
+import '../../features/firebase_app_check/data/repositories/firebase_app_check_repository_impl.dart';
+import '../../features/firebase_app_check/domain/repositories/firebase_app_check_repository.dart';
+import '../../features/firebase_app_check/domain/usecases/activate_app_check_usecase.dart';
+import '../../features/firebase_app_check/domain/usecases/get_app_check_token_usecase.dart';
+import '../../features/firebase_app_check/domain/usecases/get_limited_use_token_usecase.dart';
+import '../../features/firebase_app_check/domain/usecases/set_token_auto_refresh_usecase.dart';
+import '../../features/firebase_crashlytics/data/datasources/crashlytics_remote_data_source.dart';
+import '../../features/firebase_crashlytics/data/repositories/firebase_crashlytics_repository_impl.dart';
+import '../../features/firebase_crashlytics/domain/repositories/firebase_crashlytics_repository.dart';
+import '../../features/firebase_crashlytics/domain/usecases/enable_collection_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/log_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/record_error_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/record_flutter_error_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/set_custom_key_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/set_custom_keys_usecase.dart';
+import '../../features/firebase_crashlytics/domain/usecases/set_user_id_usecase.dart';
+import '../../features/firebase_functions/data/datasources/firebase_functions_remote_data_source.dart';
+import '../../features/firebase_functions/data/repositories/firebase_functions_repository_impl.dart';
+import '../../features/firebase_functions/domain/repositories/firebase_functions_repository.dart';
+import '../../features/firebase_functions/domain/usecases/call_function_usecase.dart';
+import '../../features/firebase_functions/domain/usecases/call_region_function_usecase.dart';
+import '../../features/firebase_functions/domain/usecases/call_timeout_function_usecase.dart';
+import '../../features/firebase_remote_config/data/datasources/remote_config_remote_data_source.dart';
+import '../../features/firebase_remote_config/data/repositories/remote_config_repository_impl.dart';
+import '../../features/firebase_remote_config/domain/repositories/remote_config_repository.dart';
+import '../../features/firebase_remote_config/domain/usecases/activate_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/fetch_and_activate_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/fetch_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/get_bool_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/get_double_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/get_int_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/get_string_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/set_defaults_usecase.dart';
+import '../../features/firebase_remote_config/domain/usecases/set_settings_usecase.dart';
+import '../../features/firestore_aggregate/data/datasources/firestore_aggregate_remote_data_source.dart';
+import '../../features/firestore_aggregate/data/repositories/firestore_aggregate_repository_impl.dart';
+import '../../features/firestore_aggregate/domain/repositories/firestore_aggregate_repository.dart';
+import '../../features/firestore_aggregate/domain/usecases/count_query_usecase.dart';
 import '../../features/firestore_batch/data/datasources/firestore_batch_remote_data_source.dart';
 import '../../features/firestore_batch/data/repositories/firestore_batch_repository_impl.dart';
 import '../../features/firestore_batch/domain/repositories/firestore_batch_repository.dart';
 import '../../features/firestore_batch/domain/usecases/commit_batch_usecase.dart';
 import '../../features/firestore_batch/domain/usecases/run_transaction_usecase.dart';
+import '../../features/firestore_collection_group/data/datasources/firestore_collection_group_remote_data_source.dart';
+import '../../features/firestore_collection_group/data/repositories/firestore_collection_group_repository_impl.dart';
+import '../../features/firestore_collection_group/domain/repositories/firestore_collection_group_repository.dart';
+import '../../features/firestore_collection_group/domain/usecases/execute_collection_group_query_usecase.dart';
+import '../../features/firestore_collection_group/domain/usecases/watch_collection_group_query_usecase.dart';
+import '../../features/firestore_listener/data/datasources/firestore_listener_remote_data_source.dart';
+import '../../features/firestore_listener/data/repositories/firestore_listener_repository_impl.dart';
+import '../../features/firestore_listener/domain/repositories/firestore_listener_repository.dart';
+import '../../features/firestore_listener/domain/usecases/listen_query_usecase.dart';
 import '../../features/firestore_pagination/data/datasources/firestore_pagination_remote_data_source.dart';
 import '../../features/firestore_pagination/data/repositories/firestore_pagination_repository_impl.dart';
 import '../../features/firestore_pagination/domain/repositories/firestore_pagination_repository.dart';
@@ -64,6 +125,9 @@ import '../../features/notifications/domain/repositories/notification_repository
 import '../../features/notifications/domain/usecases/get_fcm_token_usecase.dart';
 import '../../features/notifications/domain/usecases/get_initial_message_usecase.dart';
 import '../../features/notifications/domain/usecases/initialize_notifications_usecase.dart';
+import '../../features/notifications/domain/usecases/listen_foreground_messages_usecase.dart';
+import '../../features/notifications/domain/usecases/listen_notification_opened_usecase.dart';
+import '../../features/notifications/domain/usecases/listen_token_refresh_usecase.dart';
 import '../../features/notifications/domain/usecases/request_notification_permission_usecase.dart';
 import '../../features/notifications/domain/usecases/show_local_notification_usecase.dart';
 import '../../features/notifications/domain/usecases/subscribe_topic_usecase.dart';
@@ -266,6 +330,21 @@ class InitialBinding extends Bindings {
       () => VerifyPhoneOtpUseCase(Get.find<AuthRepository>()),
       fenix: true,
     );
+    Get.lazyPut<SendPhoneReauthOtpUseCase>(
+          () =>
+          SendPhoneReauthOtpUseCase(
+            Get.find<AuthRepository>(),
+          ),
+      fenix: true,
+    );
+
+    Get.lazyPut<ReauthenticateWithPhoneOtpUseCase>(
+          () =>
+          ReauthenticateWithPhoneOtpUseCase(
+            Get.find<AuthRepository>(),
+          ),
+      fenix: true,
+    );
 
     Get.lazyPut<CompleteProfileUseCase>(
       () => CompleteProfileUseCase(Get.find<AuthRepository>()),
@@ -331,6 +410,29 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => UnsubscribeTopicUseCase(Get.find()), fenix: true);
 
     Get.lazyPut(() => ShowLocalNotificationUseCase(Get.find()), fenix: true);
+    Get.lazyPut<ListenForegroundMessagesUseCase>(
+          () =>
+          ListenForegroundMessagesUseCase(
+            Get.find<NotificationRepository>(),
+          ),
+      fenix: true,
+    );
+
+    Get.lazyPut<ListenNotificationOpenedUseCase>(
+          () =>
+          ListenNotificationOpenedUseCase(
+            Get.find<NotificationRepository>(),
+          ),
+      fenix: true,
+    );
+
+    Get.lazyPut<ListenTokenRefreshUseCase>(
+          () =>
+          ListenTokenRefreshUseCase(
+            Get.find<NotificationRepository>(),
+          ),
+      fenix: true,
+    );
 
     /// 7. POSTS USECASES
 
@@ -384,10 +486,6 @@ class InitialBinding extends Bindings {
           () => WatchQueryUseCase(Get.find<FirestoreQueryRepository>()),
       fenix: true,
     );
-    Get.lazyPut(
-          () => WatchQueryUseCase(Get.find<FirestoreQueryRepository>()),
-      fenix: true,
-    );
 
     /// 12. BATCH USECASES
     Get.lazyPut(
@@ -416,7 +514,10 @@ class InitialBinding extends Bindings {
         authRepository: Get.find<AuthRepository>(),
         ensureUserProfileUseCase: Get.find<EnsureUserProfileUseCase>(),
         sendPasswordResetEmailUseCase:
-            Get.find<SendPasswordResetEmailUseCase>(),
+        Get.find<SendPasswordResetEmailUseCase>(),
+        sendPhoneReauthOtpUseCase: Get.find<SendPhoneReauthOtpUseCase>(),
+        reauthenticateWithPhoneOtpUseCase: Get.find<
+            ReauthenticateWithPhoneOtpUseCase>(),
       ),
 
       fenix: true,
@@ -495,7 +596,7 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
 
-    /// 15. Firestore Pagination
+    /// 15. FIRESTORE PAGINATION
     Get.lazyPut<FirestorePaginationRemoteDataSource>(
           () =>
           FirestorePaginationRemoteDataSourceImpl(
@@ -516,7 +617,272 @@ class InitialBinding extends Bindings {
             Get.find<FirestorePaginationRepository>(),
           ),
     );
+
+    /// 16. FIRESTORE LISTENER
+    Get.lazyPut<FirestoreListenerRemoteDataSource>(
+          () =>
+          FirestoreListenerRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+    );
+
+    Get.lazyPut<FirestoreListenerRepository>(
+          () =>
+          FirestoreListenerRepositoryImpl(
+            Get.find<FirestoreListenerRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          ListenQueryUseCase(
+            Get.find<FirestoreListenerRepository>(),
+          ),
+    );
+
+
+    /// 16. FIRESTORE AGGREGATE
+
+    Get.lazyPut<FirestoreAggregateRemoteDataSource>(
+          () =>
+          FirestoreAggregateRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+    );
+
+    Get.lazyPut<FirestoreAggregateRepository>(
+          () =>
+          FirestoreAggregateRepositoryImpl(
+            Get.find<FirestoreAggregateRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          CountQueryUseCase(
+            Get.find<FirestoreAggregateRepository>(),
+          ),
+    );
+
+    /// 17. FIRESTORE COLLECTION GROUP
+    Get.lazyPut<FirestoreCollectionGroupRemoteDataSource>(
+          () =>
+          FirestoreCollectionGroupRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+    );
+
+    Get.lazyPut<FirestoreCollectionGroupRepository>(
+          () =>
+          FirestoreCollectionGroupRepositoryImpl(
+            Get.find<FirestoreCollectionGroupRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          ExecuteCollectionGroupQueryUseCase(
+            Get.find<FirestoreCollectionGroupRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          WatchCollectionGroupQueryUseCase(
+            Get.find<FirestoreCollectionGroupRepository>(),
+          ),
+    );
+
+    /// 18. FIRESTORE REMOTE CONFIG
+    Get.lazyPut<RemoteConfigRemoteDataSource>(
+          () =>
+          RemoteConfigRemoteDataSourceImpl(
+            FirebaseRemoteConfig.instance,
+          ),
+    );
+
+    Get.lazyPut<RemoteConfigRepository>(
+          () =>
+          RemoteConfigRepositoryImpl(
+            Get.find<RemoteConfigRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(() => FetchUseCase(Get.find()));
+    Get.lazyPut(() => ActivateUseCase(Get.find()));
+    Get.lazyPut(() => FetchAndActivateUseCase(Get.find()));
+    Get.lazyPut(() => GetStringUseCase(Get.find()));
+    Get.lazyPut(() => GetBoolUseCase(Get.find()));
+    Get.lazyPut(() => GetIntUseCase(Get.find()));
+    Get.lazyPut(() => GetDoubleUseCase(Get.find()));
+    Get.lazyPut(() => SetDefaultsUseCase(Get.find()));
+    Get.lazyPut(() => SetSettingsUseCase(Get.find()));
+
+
+    /// 19. FIRESTORE FUNCTIONS
+
+    Get.lazyPut<FirebaseFunctionsRemoteDataSource>(
+          () => FirebaseFunctionsRemoteDataSourceImpl(),
+    );
+
+    Get.lazyPut<FirebaseFunctionsRepository>(
+          () =>
+          FirebaseFunctionsRepositoryImpl(
+            Get.find<FirebaseFunctionsRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          CallFunctionUseCase(
+            Get.find<FirebaseFunctionsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          CallRegionFunctionUseCase(
+            Get.find<FirebaseFunctionsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          CallTimeoutFunctionUseCase(
+            Get.find<FirebaseFunctionsRepository>(),
+          ),
+    );
+
+
+    /// 20. FIRESTORE CRASHLYTICS
+    Get.lazyPut<CrashlyticsRemoteDataSource>(
+          () => const CrashlyticsRemoteDataSourceImpl(),
+    );
+
+    Get.lazyPut<FirebaseCrashlyticsRepository>(
+          () =>
+          FirebaseCrashlyticsRepositoryImpl(
+            Get.find<CrashlyticsRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          LogUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          RecordErrorUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          RecordFlutterErrorUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          SetUserIdUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          SetCustomKeyUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          SetCustomKeysUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+    Get.lazyPut(
+          () =>
+          EnableCollectionUseCase(
+            Get.find<FirebaseCrashlyticsRepository>(),
+          ),
+    );
+
+
+    /// 21. FIRESTORE ANALYTICS
+    Get.lazyPut<AnalyticsRemoteDataSource>(
+          () => const AnalyticsRemoteDataSourceImpl(),
+    );
+
+    Get.lazyPut<FirebaseAnalyticsRepository>(
+          () =>
+          FirebaseAnalyticsRepositoryImpl(
+            Get.find<AnalyticsRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut(() => LogEventUseCase(Get.find()));
+    Get.lazyPut(() => SetUserIdUseCase(Get.find()));
+    Get.lazyPut(() => SetUserPropertyUseCase(Get.find()));
+    Get.lazyPut(() => LogLoginUseCase(Get.find()));
+    Get.lazyPut(() => LogSignUpUseCase(Get.find()));
+    Get.lazyPut(() => LogScreenViewUseCase(Get.find()));
+    Get.lazyPut(() => ResetAnalyticsDataUseCase(Get.find()));
+    Get.lazyPut(() => SetCollectionEnabledUseCase(Get.find()));
+
+    /// 22. FIRESTORE APP CHECK
+    Get.lazyPut<AppCheckRemoteDataSource>(
+          () => const AppCheckRemoteDataSourceImpl(),
+    );
+
+    Get.lazyPut<FirebaseAppCheckRepository>(
+          () =>
+          FirebaseAppCheckRepositoryImpl(
+            Get.find<AppCheckRemoteDataSource>(),
+          ),
+    );
+
+    Get.lazyPut<ActivateAppCheckUseCase>(
+          () =>
+          ActivateAppCheckUseCase(
+            Get.find<FirebaseAppCheckRepository>(),
+          ),
+    );
+
+    Get.lazyPut<GetAppCheckTokenUseCase>(
+          () =>
+          GetAppCheckTokenUseCase(
+            Get.find<FirebaseAppCheckRepository>(),
+          ),
+    );
+
+    Get.lazyPut<GetLimitedUseTokenUseCase>(
+          () =>
+          GetLimitedUseTokenUseCase(
+            Get.find<FirebaseAppCheckRepository>(),
+          ),
+    );
+
+    Get.lazyPut<SetTokenAutoRefreshUseCase>(
+          () =>
+          SetTokenAutoRefreshUseCase(
+            Get.find<FirebaseAppCheckRepository>(),
+          ),
+    );
   }
 }
+
+
+
+
+
+
 
 

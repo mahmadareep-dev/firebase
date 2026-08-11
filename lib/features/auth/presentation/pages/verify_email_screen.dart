@@ -83,6 +83,8 @@ class VerifyEmailScreen extends StatelessWidget {
                 child: Text(
                   authController.isSendingVerification.value
                       ? 'Sending...'
+                      : authController.resendVerificationSeconds.value > 0
+                      ? 'Resend in ${authController.resendVerificationSeconds.value}s'
                       : 'Resend Verification Email',
                 ),
               ),

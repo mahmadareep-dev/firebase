@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../../profile/domain/entities/user_entity.dart';
 import '../../../profile/domain/usecases/ensure_user_profile_usecase.dart';
 import '../../../profile/presentation/controllers/profile_controller.dart';
@@ -12,8 +15,10 @@ import '../../domain/usecases/change_password_usecase.dart';
 import '../../domain/usecases/check_email_verification_usecase.dart';
 import '../../domain/usecases/delete_account_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/reauthenticate_with_phone_otp_usecase.dart';
 import '../../domain/usecases/resend_verification_email_usecase.dart';
 import '../../domain/usecases/send_password_reset_email_usecase.dart';
+import '../../domain/usecases/send_phone_reauth_otp_usecase.dart';
 import '../../domain/usecases/sign_in_with_email_usecase.dart';
 import '../../domain/usecases/sign_in_with_google_usecase.dart';
 import '../../domain/usecases/sign_up_with_email_usecase.dart';
@@ -30,6 +35,8 @@ class AuthController extends GetxController {
   final DeleteAccountUseCase deleteAccountUseCase;
   final EnsureUserProfileUseCase ensureUserProfileUseCase;
   final SendPasswordResetEmailUseCase sendPasswordResetEmailUseCase;
+  final SendPhoneReauthOtpUseCase sendPhoneReauthOtpUseCase;
+  final ReauthenticateWithPhoneOtpUseCase reauthenticateWithPhoneOtpUseCase;
 
   AuthController({
     required this.signInWithEmailUseCase,
@@ -43,6 +50,8 @@ class AuthController extends GetxController {
     required this.deleteAccountUseCase,
     required this.ensureUserProfileUseCase,
     required this.sendPasswordResetEmailUseCase,
+    required this.sendPhoneReauthOtpUseCase,
+    required this.reauthenticateWithPhoneOtpUseCase,
   });
 
   final emailController = TextEditingController();
@@ -61,11 +70,18 @@ class AuthController extends GetxController {
 
   final currentPasswordController = TextEditingController();
   final newPasswordController = TextEditingController();
+  final phoneReauthOtpController = TextEditingController();
+  final RxInt resendVerificationSeconds = 0.obs;
 
+  Timer? _resendVerificationTimer;
   final RxBool isChangingPassword = false.obs;
   final RxBool isDeletingAccount = false.obs;
   final RxBool isLoggingOut = false.obs;
 
+  final RxBool isSendingPhoneReauthOtp = false.obs;
+  final RxBool isVerifyingPhoneReauthOtp = false.obs;
+
+  String? phoneReauthVerificationId;
   AuthUserEntity? get currentUser => authRepository.currentUser;
 
   String get currentUserName => currentUser?.displayName ?? '';
@@ -223,6 +239,14 @@ class AuthController extends GetxController {
   }
 
   Future<void> resendVerificationEmail() async {
+    if (isSendingVerification.value) {
+      return;
+    }
+
+    if (resendVerificationSeconds.value > 0) {
+      return;
+    }
+
     try {
       isSendingVerification.value = true;
 
@@ -233,13 +257,41 @@ class AuthController extends GetxController {
         'Verification email sent again',
         snackPosition: SnackPosition.BOTTOM,
       );
+
+      _startVerificationResendCooldown();
     } on FirebaseAuthException catch (e) {
-      _showError(_getFirebaseAuthMessage(e));
+      if (e.code == 'too-many-requests') {
+        _showError(
+          'Too many verification emails requested. Please wait before trying again.',
+        );
+
+        _startVerificationResendCooldown();
+      } else {
+        _showError(_getFirebaseAuthMessage(e));
+      }
     } catch (_) {
       _showError('Failed to send verification email');
     } finally {
       isSendingVerification.value = false;
     }
+  }
+
+  void _startVerificationResendCooldown() {
+    _resendVerificationTimer?.cancel();
+
+    resendVerificationSeconds.value = 30;
+
+    _resendVerificationTimer = Timer.periodic(const Duration(seconds: 1), (
+      timer,
+    ) {
+      if (resendVerificationSeconds.value <= 1) {
+        resendVerificationSeconds.value = 0;
+        timer.cancel();
+        return;
+      }
+
+      resendVerificationSeconds.value--;
+    });
   }
 
   Future<void> sendPasswordResetEmail() async {
@@ -323,18 +375,18 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> changePassword() async {
+  Future<bool> changePassword() async {
     final currentPassword = currentPasswordController.text.trim();
     final newPassword = newPasswordController.text.trim();
 
     if (currentPassword.isEmpty || newPassword.isEmpty) {
       _showError('Please enter current and new password');
-      return;
+      return false;
     }
 
     if (newPassword.length < 6) {
       _showError('New password must be at least 6 characters');
-      return;
+      return false;
     }
 
     try {
@@ -351,20 +403,40 @@ class AuthController extends GetxController {
         'Success',
         'Password changed successfully',
         snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
       );
-    } on FirebaseAuthException catch (e) {
-      _showError(e.message ?? 'Failed to change password');
+
+      // Give the user time to see the success message.
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      // Sign out and let AuthSessionController
+      // automatically show LoginScreen.
+      await logout();
+
+      return true;
+    } on AppException catch (e) {
+      _showError(e.message);
+      return false;
     } catch (_) {
       _showError('Failed to change password');
+      return false;
     } finally {
       isChangingPassword.value = false;
     }
   }
 
   Future<void> deleteAccount() async {
-    final password = currentPasswordController.text.trim();
+    final user = currentUser;
 
-    if (password.isEmpty) {
+    if (user == null) {
+      _showError('User not found');
+      return;
+    }
+
+    final bool isPasswordUser = user.isPasswordUser;
+    final String password = currentPasswordController.text.trim();
+
+    if (isPasswordUser && password.isEmpty) {
       _showError('Enter your current password first');
       return;
     }
@@ -372,7 +444,9 @@ class AuthController extends GetxController {
     try {
       isDeletingAccount.value = true;
 
-      await deleteAccountUseCase(currentPassword: password);
+      await deleteAccountUseCase(
+        currentPassword: isPasswordUser ? password : null,
+      );
 
       clearAccountForm();
 
@@ -380,15 +454,16 @@ class AuthController extends GetxController {
         Get.find<ProfileController>().clearProfile();
       }
 
-      Get.until((route) => route.isFirst);
-
       Get.snackbar(
         'Success',
         'Account deleted successfully',
         snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
       );
-    } on FirebaseAuthException catch (e) {
-      _showError(_getFirebaseAuthMessage(e));
+
+      Get.until((route) => route.isFirst);
+    } on AppException catch (e) {
+      _showError(e.message);
     } catch (_) {
       _showError('Failed to delete account');
     } finally {
@@ -421,6 +496,167 @@ class AuthController extends GetxController {
       ),
     );
   }
+  Future<void> sendPhoneReauthOtp() async {
+    final user = currentUser;
+
+    if (user == null) {
+      _showError('User not found');
+      return;
+    }
+
+    final phoneNumber = user.phoneNumber.trim();
+
+    if (phoneNumber.isEmpty) {
+      _showError('No phone number linked to this account');
+      return;
+    }
+
+    try {
+      isSendingPhoneReauthOtp.value = true;
+
+      await sendPhoneReauthOtpUseCase(
+        phoneNumber: phoneNumber,
+        onCodeSent: (verificationId) {
+          phoneReauthVerificationId = verificationId;
+        },
+        onVerificationFailed: (message) {
+          _showError(message);
+        },
+        onAutoVerified: () async {
+          await _deleteAccountAfterReauthentication();
+        },
+      );
+
+      if (phoneReauthVerificationId != null) {
+        Get.back();
+        _showPhoneReauthOtpDialog();
+      }
+    } on AppException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Failed to send verification code');
+    } finally {
+      isSendingPhoneReauthOtp.value = false;
+    }
+  }Future<void> verifyPhoneReauthOtp() async {
+    final verificationId = phoneReauthVerificationId;
+    final smsCode = phoneReauthOtpController.text.trim();
+
+    if (verificationId == null || verificationId.isEmpty) {
+      _showError('Verification session expired. Please request a new OTP.');
+      return;
+    }
+
+    if (smsCode.length != 6) {
+      _showError('Please enter the 6-digit OTP');
+      return;
+    }
+
+    try {
+      isVerifyingPhoneReauthOtp.value = true;
+
+      await reauthenticateWithPhoneOtpUseCase(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      Get.back();
+
+      await _deleteAccountAfterReauthentication();
+    } on AppException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Invalid OTP');
+    } finally {
+      isVerifyingPhoneReauthOtp.value = false;
+    }
+  }Future<void> _deleteAccountAfterReauthentication() async {
+    try {
+      isDeletingAccount.value = true;
+
+      await deleteAccountUseCase(
+        currentPassword: null,
+      );
+
+      clearAccountForm();
+
+      phoneReauthOtpController.clear();
+      phoneReauthVerificationId = null;
+
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().clearProfile();
+      }
+
+      Get.snackbar(
+        'Success',
+        'Account deleted successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+
+      Get.until((route) => route.isFirst);
+    } on AppException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Failed to delete account');
+    } finally {
+      isDeletingAccount.value = false;
+    }
+  }void _showPhoneReauthOtpDialog() {
+    phoneReauthOtpController.clear();
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Verify Phone Number'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter the OTP sent to $currentPhone',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneReauthOtpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'OTP',
+                prefixIcon: Icon(Icons.sms_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: isVerifyingPhoneReauthOtp.value
+                ? null
+                : () {
+              phoneReauthOtpController.clear();
+              Get.back();
+            },
+            child: const Text('Cancel'),
+          ),
+          Obx(
+                () => ElevatedButton(
+              onPressed: isVerifyingPhoneReauthOtp.value
+                  ? null
+                  : verifyPhoneReauthOtp,
+              child: isVerifyingPhoneReauthOtp.value
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                ),
+              )
+                  : const Text('Verify & Delete'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void onClose() {
@@ -434,7 +670,8 @@ class AuthController extends GetxController {
     currentPasswordController.dispose();
     newPasswordController.dispose();
     forgotPasswordEmailController.dispose();
-
+    _resendVerificationTimer?.cancel();
+    phoneReauthOtpController.dispose();
     super.onClose();
   }
 }

@@ -28,6 +28,20 @@ abstract class AuthRepository {
 
   Future<void> reAuthenticate(String currentPassword);
 
+  Future<void> reAuthenticateWithGoogle();
+
+  Future<void> sendPhoneReauthOtp({
+    required String phoneNumber,
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String message) onVerificationFailed,
+    required void Function() onAutoVerified,
+  });
+
+  Future<void> reAuthenticateWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+  });
+
   Future<void> deleteAccount();
 
   Future<void> sendPasswordResetEmail({required String email});

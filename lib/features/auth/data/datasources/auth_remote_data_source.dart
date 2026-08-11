@@ -12,6 +12,21 @@ abstract class AuthRemoteDataSource {
 
   Future<void> reAuthenticate(String currentPassword);
 
+  Future reAuthenticateWithGoogle();
+
+  Future sendPhoneReauthOtp({
+    required String phoneNumber,
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String message) onVerificationFailed,
+    required void Function() onAutoVerified,
+  });
+
+  Future reAuthenticateWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+  });
+
+
   Future<void> deleteAccount();
 
   Future<void> reloadCurrentUser();
@@ -169,13 +184,103 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<void> reAuthenticate(String currentPassword) async {
     final user = firebaseAuth.currentUser;
 
-    if (user == null || user.email == null) {
+    if (user == null) {
       throw Exception('No user logged in');
     }
 
-    final credential = EmailAuthProvider.credential(
-      email: user.email!,
+    final email = user.email;
+
+    if (email == null || email
+        .trim()
+        .isEmpty) {
+      throw Exception('This account does not have an email address');
+    }
+
+    await firebaseAuth.signInWithEmailAndPassword(
+      email: email,
       password: currentPassword,
+    );
+  }
+
+  @override
+  Future reAuthenticateWithGoogle() async {
+    final user = firebaseAuth.currentUser;
+
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    await googleSignIn.initialize();
+
+    final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  @override
+  Future sendPhoneReauthOtp({
+    required String phoneNumber,
+    required void Function(String verificationId) onCodeSent,
+    required void Function(String message) onVerificationFailed,
+    required void Function() onAutoVerified,
+  }) async {
+    final user = firebaseAuth.currentUser;
+
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    if (user.phoneNumber == null || user.phoneNumber!.isEmpty) {
+      throw Exception('No phone number linked to this account');
+    }
+
+    await firebaseAuth.verifyPhoneNumber(
+      phoneNumber: user.phoneNumber!,
+      timeout: const Duration(seconds: 60),
+
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        try {
+          await user.reauthenticateWithCredential(credential);
+          onAutoVerified();
+        } catch (e) {
+          onVerificationFailed(e.toString());
+        }
+      },
+
+      verificationFailed: (FirebaseAuthException exception) {
+        onVerificationFailed(
+          exception.message ?? 'Phone verification failed',
+        );
+      },
+
+      codeSent: (String verificationId, int? resendToken) {
+        onCodeSent(verificationId);
+      },
+
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
+
+  @override
+  Future reAuthenticateWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final user = firebaseAuth.currentUser;
+
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
     );
 
     await user.reauthenticateWithCredential(credential);

@@ -18,6 +18,8 @@ class AuthBinding extends Bindings {
         deleteAccountUseCase: Get.find(),
         ensureUserProfileUseCase: Get.find(),
         sendPasswordResetEmailUseCase: Get.find(),
+        sendPhoneReauthOtpUseCase: Get.find(),
+        reauthenticateWithPhoneOtpUseCase: Get.find(),
       ),
     );
   }

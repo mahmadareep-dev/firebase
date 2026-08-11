@@ -49,14 +49,23 @@ class AuthSessionController extends GetxController {
 
     status.value = AuthSessionStatus.loading;
 
-    // Email users must verify their email first.
+    // Email/password users must verify their email first.
     if (user.email.isNotEmpty && !user.isEmailVerified) {
       status.value = AuthSessionStatus.emailUnverified;
       return;
     }
 
     try {
-      status.value = AuthSessionStatus.authenticated;
+      final profileResult = await getUserProfileUseCase(user.uid);
+
+      profileResult.when(
+        success: (_) {
+          status.value = AuthSessionStatus.authenticated;
+        },
+        failure: (_) {
+          status.value = AuthSessionStatus.profileIncomplete;
+        },
+      );
     } catch (_) {
       status.value = AuthSessionStatus.profileIncomplete;
     }

@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==============================
+    // USERS
+    // ==============================
+    match /users/{userId} {
+      allow read, create, update, delete:
+        if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    // ==============================
+    // POSTS
+    // ==============================
+    match /posts/{postId} {
+
+      // Authenticated users can read posts.
+      allow read:
+        if request.auth != null;
+
+      // User can create only a post belonging to themselves.
+      allow create:
+        if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+
+      // User can update only their own post.
+      allow update:
+        if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+
+      // User can delete only their own post.
+      allow delete:
+        if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+  }
+}

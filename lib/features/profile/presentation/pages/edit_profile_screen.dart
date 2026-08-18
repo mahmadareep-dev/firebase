@@ -160,7 +160,14 @@ class EditProfileScreen extends GetView<ProfileController> {
                       controller.isUpdating.value ||
                           controller.isUploadingImage.value
                       ? null
-                      : controller.updateProfile,
+                      : () {
+                          controller.updateProfile();
+                        },
+                  // onPressed:
+                  //     controller.isUpdating.value ||
+                  //         controller.isUploadingImage.value
+                  //     ? null
+                  //     : controller.updateProfile,
                   child: controller.isUpdating.value
                       ? const SizedBox(
                           width: 22,

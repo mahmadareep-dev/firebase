@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,6 +10,7 @@ import '../../../../core/services/file_picker/file_picker_service.dart';
 import '../../../../core/services/snackbar/snackbar_service.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../file_storage/data/builders/firebase_storage_builder.dart';
+import '../../../firestore_batch/data/builders/firestore_batch_builder.dart';
 import '../../domain/entities/post_entity.dart';
 import '../../domain/usecases/add_post_usecase.dart';
 import '../../domain/usecases/delete_post_usecase.dart';
@@ -31,6 +33,285 @@ class PostController extends BaseCrudController {
   final GetPostsUseCase getPostsUseCase;
   final WatchPostsUseCase watchPostsUseCase;
 
+  ///Test
+
+  Future<void> testBatchMixed() async {
+    if (posts.length < 2) {
+      showError('At least 2 posts are required for batch testing.');
+      return;
+    }
+
+    final first = posts[0];
+    final second = posts[1];
+
+    debugPrint('========== FIRESTORE MIXED BATCH TEST ==========');
+    debugPrint('UPDATE document: ${first.id}');
+    debugPrint('SET + MERGE document: ${second.id}');
+
+    final batch = FirestoreBatchBuilder();
+
+    final result = await batch
+        // Operation 1: UPDATE
+        .update(
+          collection: 'posts',
+          documentId: first.id,
+          data: {
+            'mixedBatchUpdate': true,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+        )
+        // Operation 2: SET with MERGE
+        .set(
+          collection: 'posts',
+          documentId: second.id,
+          data: {
+            'mixedBatchSet': true,
+            'mixedBatchMessage': 'Mixed batch SET successful',
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          options: SetOptions(merge: true),
+        )
+        .commit();
+
+    debugPrint('========== MIXED BATCH RESULT ==========');
+    debugPrint('Result: $result');
+    debugPrint('========================================');
+
+    result.when(
+      success: (_) {
+        showSuccess('Mixed Firestore batch committed successfully.');
+      },
+      failure: (failure) {
+        showError('Mixed batch failed: ${failure.message}');
+      },
+    );
+  }
+
+  Future<void> testBatchDelete() async {
+    final testDocumentId =
+        'batch_delete_test_${DateTime.now().millisecondsSinceEpoch}';
+
+    debugPrint('========== FIRESTORE BATCH DELETE TEST ==========');
+    debugPrint('Test Document ID: $testDocumentId');
+
+    final authController = Get.find<AuthController>();
+
+    // Check authentication
+    if (!authController.isLoggedIn) {
+      showError('User not logged in.');
+      return;
+    }
+
+    final userId = authController.currentUserId;
+
+    // ============================================================
+    /// STEP 1: CREATE TEMPORARY DOCUMENT
+    // ============================================================
+
+    final createBatch = FirestoreBatchBuilder();
+
+    final createResult = await createBatch
+        .set(
+          collection: 'posts',
+          documentId: testDocumentId,
+          data: {
+            'userId': userId,
+            'batchDeleteTest': true,
+            'message': 'Temporary document for delete test',
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+        )
+        .commit();
+
+    debugPrint('========== CREATE RESULT ==========');
+    debugPrint('Result: $createResult');
+    debugPrint('===================================');
+
+    // Stop if creation failed
+    var createSucceeded = false;
+
+    createResult.when(
+      success: (_) {
+        createSucceeded = true;
+        debugPrint('Temporary document created successfully.');
+      },
+      failure: (failure) {
+        debugPrint('Failed to create temporary document: ${failure.message}');
+
+        showError('Delete test setup failed: ${failure.message}');
+      },
+    );
+
+    if (!createSucceeded) {
+      return;
+    }
+
+    // ============================================================
+    /// STEP 2: DELETE TEMPORARY DOCUMENT
+    // ============================================================
+
+    final deleteBatch = FirestoreBatchBuilder();
+
+    final deleteResult = await deleteBatch
+        .delete(collection: 'posts', documentId: testDocumentId)
+        .commit();
+
+    debugPrint('========== DELETE BATCH RESULT ==========');
+    debugPrint('Result: $deleteResult');
+    debugPrint('=========================================');
+
+    deleteResult.when(
+      success: (_) {
+        debugPrint('Temporary document deleted successfully.');
+
+        showSuccess('Firestore batch DELETE committed successfully.');
+      },
+      failure: (failure) {
+        debugPrint('Batch DELETE failed: ${failure.message}');
+
+        showError('Batch DELETE failed: ${failure.message}');
+      },
+    );
+  }
+
+  Future<void> testBatchAtomicity() async {
+    final authController = Get.find<AuthController>();
+
+    if (!authController.isLoggedIn) {
+      showError('User not logged in.');
+      return;
+    }
+
+    final userId = authController.currentUserId;
+
+    final firstId =
+        'batch_atomicity_first_${DateTime.now().millisecondsSinceEpoch}';
+
+    final secondId =
+        'batch_atomicity_second_${DateTime.now().millisecondsSinceEpoch}';
+
+    debugPrint('========== FIRESTORE BATCH ATOMICITY TEST ==========');
+    debugPrint('First temporary document: $firstId');
+    debugPrint('Second temporary document: $secondId');
+
+    // ============================================================
+    // STEP 1: CREATE TWO TEMPORARY DOCUMENTS
+    // ============================================================
+
+    final setupBatch = FirestoreBatchBuilder();
+
+    final setupResult = await setupBatch
+        .set(
+          collection: 'posts',
+          documentId: firstId,
+          data: {
+            'userId': userId,
+            'batchAtomicityTest': true,
+            'name': 'Atomicity First',
+          },
+        )
+        .set(
+          collection: 'posts',
+          documentId: secondId,
+          data: {
+            'userId': userId,
+            'batchAtomicityTest': true,
+            'name': 'Atomicity Second',
+          },
+        )
+        .commit();
+
+    var setupSucceeded = false;
+
+    setupResult.when(
+      success: (_) {
+        setupSucceeded = true;
+        debugPrint('Temporary documents created successfully.');
+      },
+      failure: (failure) {
+        debugPrint('Setup failed: ${failure.message}');
+
+        showError('Atomicity test setup failed: ${failure.message}');
+      },
+    );
+
+    if (!setupSucceeded) {
+      return;
+    }
+
+    // ============================================================
+    // STEP 2: CREATE INTENTIONALLY FAILING BATCH
+    // ============================================================
+
+    final testBatch = FirestoreBatchBuilder();
+
+    final result = await testBatch
+        // Operation 1:
+        // This should be VALID.
+        .update(
+          collection: 'posts',
+          documentId: firstId,
+          data: {
+            'atomicityUpdate': true,
+            'atomicityMessage': 'This should NOT be saved',
+          },
+        )
+        // Operation 2:
+        // This should FAIL because we attempt to change
+        // the ownership of the document.
+        .update(
+          collection: 'posts',
+          documentId: secondId,
+          data: {'userId': 'unauthorized-user', 'atomicityFailure': true},
+        )
+        .commit();
+
+    debugPrint('========== ATOMICITY RESULT ==========');
+    debugPrint('Result: $result');
+    debugPrint('======================================');
+
+    var batchFailed = false;
+
+    result.when(
+      success: (_) {
+        debugPrint('UNEXPECTED: Batch succeeded.');
+      },
+      failure: (failure) {
+        batchFailed = true;
+
+        debugPrint('Expected batch failure: ${failure.message}');
+      },
+    );
+
+    // ============================================================
+    // STEP 3: CLEANUP
+    // ============================================================
+
+    // final cleanupBatch = FirestoreBatchBuilder();
+    //
+    // final cleanupResult = await cleanupBatch
+    //     .delete(collection: 'posts', documentId: firstId)
+    //     .delete(collection: 'posts', documentId: secondId)
+    //     .commit();
+
+    // cleanupResult.when(
+    //   success: (_) {
+    //     debugPrint('Temporary atomicity documents deleted.');
+    //   },
+    //   failure: (failure) {
+    //     debugPrint('Cleanup failed: ${failure.message}');
+    //   },
+    // );
+
+    if (batchFailed) {
+      showSuccess('Batch failed as expected. Atomicity can now be verified.');
+    } else {
+      showError('Atomicity test unexpectedly succeeded.');
+    }
+  }
+
+  ///Test
+
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
 
@@ -51,6 +332,7 @@ class PostController extends BaseCrudController {
   @override
   void onClose() {
     _watchSubscription?.cancel();
+    _watchSubscription = null;
 
     titleController.dispose();
     descriptionController.dispose();
@@ -63,11 +345,10 @@ class PostController extends BaseCrudController {
 
     _watchSubscription = watchPostsUseCase().listen(
       (data) {
-        clearError();
         posts.assignAll(data);
       },
       onError: (error) {
-        setError(error.toString());
+        errorMessage.value = error.toString();
       },
     );
   }

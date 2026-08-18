@@ -49,7 +49,7 @@ class AuthSessionController extends GetxController {
 
     status.value = AuthSessionStatus.loading;
 
-    // Email/password users must verify their email first.
+    /// Email/password users must verify their email first.
     if (user.email.isNotEmpty && !user.isEmailVerified) {
       status.value = AuthSessionStatus.emailUnverified;
       return;
@@ -62,12 +62,17 @@ class AuthSessionController extends GetxController {
         success: (_) {
           status.value = AuthSessionStatus.authenticated;
         },
-        failure: (_) {
+        failure: (failure) {
+          if (failure.code == 'profile-not-found') {
+            status.value = AuthSessionStatus.profileIncomplete;
+            return;
+          }
+
           status.value = AuthSessionStatus.profileIncomplete;
         },
       );
     } catch (_) {
-      status.value = AuthSessionStatus.profileIncomplete;
+      status.value = AuthSessionStatus.error;
     }
   }
 
@@ -91,7 +96,7 @@ class AuthSessionController extends GetxController {
       if (user == null) {
         status.value = AuthSessionStatus.unauthenticated;
       } else {
-        status.value = AuthSessionStatus.profileIncomplete;
+        status.value = AuthSessionStatus.error;
       }
     }
   }

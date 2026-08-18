@@ -193,7 +193,8 @@ class InitialBinding extends Bindings {
     Get.lazyPut<FilePickerService>(() => FilePickerServiceImpl(), fenix: true);
     Get.lazyPut(() => Connectivity());
 
-    /// 2. DATA SOURCES
+    /// 2. AUTH
+    // ***** datasource *****
     Get.lazyPut<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(
         firebaseAuth: Get.find<FirebaseAuth>(),
@@ -201,96 +202,14 @@ class InitialBinding extends Bindings {
       ),
       fenix: true,
     );
-    Get.lazyPut<ProfileRemoteDataSource>(
-      () => ProfileRemoteDataSourceImpl(
-        firestoreService: Get.find<FirestoreService>(),
-      ),
-      fenix: true,
-    );
-    Get.lazyPut<NotificationRemoteDataSource>(
-      () => NotificationRemoteDataSourceImpl(Get.find<NotificationService>()),
-      fenix: true,
-    );
-    Get.lazyPut<PostRemoteDataSource>(
-      () => PostRemoteDataSourceImpl(
-        firestoreService: Get.find<FirestoreService>(),
-      ),
-      fenix: true,
-    );
-    Get.lazyPut<FileStorageRemoteDataSource>(
-      () => FileStorageRemoteDataSourceImpl(Get.find<FirebaseStorage>()),
-      fenix: true,
-    );
-    Get.lazyPut<ConnectivityRemoteDataSource>(
-      () => ConnectivityRemoteDataSourceImpl(Get.find()),
-    );
-    Get.lazyPut<SearchRemoteDataSource<PostModel>>(
-          () =>
-          SearchRemoteDataSourceImpl<PostModel>(Get.find<FirebaseFirestore>()),
-      fenix: true,
-    );
-
-    Get.lazyPut<FirestoreQueryRemoteDataSource>(
-          () =>
-          FirestoreQueryRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
-      fenix: true,
-    );
-    Get.lazyPut<FirestoreBatchRemoteDataSource>(
-          () =>
-          FirestoreBatchRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
-      fenix: true,
-    );
-
-    /// 3. REPOSITORIES
+    // ***** repository *****
     Get.lazyPut<AuthRepository>(
       () => AuthRepositoryImpl(
         remoteDataSource: Get.find<AuthRemoteDataSource>(),
       ),
       fenix: true,
     );
-
-    Get.lazyPut<ProfileRepository>(
-      () => ProfileRepositoryImpl(
-        remoteDataSource: Get.find<ProfileRemoteDataSource>(),
-      ),
-      fenix: true,
-    );
-    Get.lazyPut<NotificationRepository>(
-      () =>
-          NotificationRepositoryImpl(Get.find<NotificationRemoteDataSource>()),
-      fenix: true,
-    );
-    Get.lazyPut<PostRepository>(
-      () => PostRepositoryImpl(remoteDataSource: Get.find()),
-      fenix: true,
-    );
-    Get.lazyPut<FileStorageRepository>(
-      () => FileStorageRepositoryImpl(remoteDataSource: Get.find()),
-      fenix: true,
-    );
-    Get.lazyPut<ConnectivityRepository>(
-      () => ConnectivityRepositoryImpl(Get.find()),
-    );
-    Get.lazyPut<SearchRepository<PostModel>>(
-          () =>
-          SearchRepositoryImpl<PostModel>(
-            remoteDataSource: Get.find<SearchRemoteDataSource<PostModel>>(),
-            collection: 'posts',
-            searchField: 'title',
-            fromFirestore: PostModel.fromFirestore,
-          ),
-      fenix: true,
-    );
-    Get.lazyPut<FirestoreQueryRepository>(
-          () => FirestoreQueryRepositoryImpl(remoteDataSource: Get.find()),
-      fenix: true,
-    );
-    Get.lazyPut<FirestoreBatchRepository>(
-          () => FirestoreBatchRepositoryImpl(remoteDataSource: Get.find()),
-      fenix: true,
-    );
-
-    /// 4. AUTH USE CASES
+    // ***** usecases *****
     Get.lazyPut<SignInWithEmailUseCase>(
       () => SignInWithEmailUseCase(Get.find<AuthRepository>()),
       fenix: true,
@@ -331,18 +250,12 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
     Get.lazyPut<SendPhoneReauthOtpUseCase>(
-          () =>
-          SendPhoneReauthOtpUseCase(
-            Get.find<AuthRepository>(),
-          ),
+          () => SendPhoneReauthOtpUseCase(Get.find<AuthRepository>()),
       fenix: true,
     );
 
     Get.lazyPut<ReauthenticateWithPhoneOtpUseCase>(
-          () =>
-          ReauthenticateWithPhoneOtpUseCase(
-            Get.find<AuthRepository>(),
-          ),
+          () => ReauthenticateWithPhoneOtpUseCase(Get.find<AuthRepository>()),
       fenix: true,
     );
 
@@ -357,10 +270,8 @@ class InitialBinding extends Bindings {
     );
 
     Get.lazyPut<DeleteAccountUseCase>(
-      () => DeleteAccountUseCase(
-        authRepository: Get.find<AuthRepository>(),
-        profileRepository: Get.find<ProfileRepository>(),
-      ),
+          () =>
+          DeleteAccountUseCase(authRepository: Get.find<AuthRepository>()),
       fenix: true,
     );
     Get.lazyPut<ObserveAuthStateUseCase>(
@@ -376,24 +287,52 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
 
-    /// 5. PROFILE USE CASES
+    /// 3. PROFILE
+    // ***** datasource *****
+    Get.lazyPut<ProfileRemoteDataSource>(
+          () =>
+          ProfileRemoteDataSourceImpl(
+            firestoreService: Get.find<FirestoreService>(),
+          ),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<ProfileRepository>(
+          () =>
+          ProfileRepositoryImpl(
+            remoteDataSource: Get.find<ProfileRemoteDataSource>(),
+          ),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut<SaveUserProfileUseCase>(
       () => SaveUserProfileUseCase(Get.find<ProfileRepository>()),
       fenix: true,
     );
-
     Get.lazyPut<GetUserProfileUseCase>(
       () => GetUserProfileUseCase(Get.find<ProfileRepository>()),
       fenix: true,
     );
-
     Get.lazyPut<EnsureUserProfileUseCase>(
       () => EnsureUserProfileUseCase(Get.find<ProfileRepository>()),
       fenix: true,
     );
     Get.lazyPut(() => UpdateProfileUseCase(Get.find()));
 
-    /// 6. NOTIFICATIONS USECASES
+    /// 4. NOTIFICATION
+    // ***** datasource *****
+    Get.lazyPut<NotificationRemoteDataSource>(
+          () =>
+          NotificationRemoteDataSourceImpl(Get.find<NotificationService>()),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<NotificationRepository>(
+          () =>
+          NotificationRepositoryImpl(Get.find<NotificationRemoteDataSource>()),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut(() => InitializeNotificationUseCase(Get.find()), fenix: true);
 
     Get.lazyPut(
@@ -412,30 +351,38 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => ShowLocalNotificationUseCase(Get.find()), fenix: true);
     Get.lazyPut<ListenForegroundMessagesUseCase>(
           () =>
-          ListenForegroundMessagesUseCase(
-            Get.find<NotificationRepository>(),
-          ),
+              ListenForegroundMessagesUseCase(
+                  Get.find<NotificationRepository>()),
       fenix: true,
     );
 
     Get.lazyPut<ListenNotificationOpenedUseCase>(
           () =>
-          ListenNotificationOpenedUseCase(
-            Get.find<NotificationRepository>(),
-          ),
+              ListenNotificationOpenedUseCase(
+                  Get.find<NotificationRepository>()),
       fenix: true,
     );
 
     Get.lazyPut<ListenTokenRefreshUseCase>(
-          () =>
-          ListenTokenRefreshUseCase(
-            Get.find<NotificationRepository>(),
-          ),
+          () => ListenTokenRefreshUseCase(Get.find<NotificationRepository>()),
       fenix: true,
     );
 
-    /// 7. POSTS USECASES
-
+    /// 5. POSTS
+    // ***** datasource *****
+    Get.lazyPut<PostRemoteDataSource>(
+          () =>
+              PostRemoteDataSourceImpl(
+                firestoreService: Get.find<FirestoreService>(),
+          ),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<PostRepository>(
+          () => PostRepositoryImpl(remoteDataSource: Get.find()),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut(() => AddPostUseCase(Get.find()), fenix: true);
     Get.lazyPut(() => UpdatePostUseCase(Get.find()), fenix: true);
     Get.lazyPut(() => DeletePostUseCase(Get.find()), fenix: true);
@@ -443,7 +390,18 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => WatchPostsUseCase(Get.find()), fenix: true);
     Get.lazyPut(() => GetPaginatedPostsUseCase(Get.find()), fenix: true);
 
-    /// 8. FILE STORAGE USECASES
+    /// FILE STORAGE
+    // ***** datasource *****
+    Get.lazyPut<FileStorageRemoteDataSource>(
+          () => FileStorageRemoteDataSourceImpl(Get.find<FirebaseStorage>()),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<FileStorageRepository>(
+          () => FileStorageRepositoryImpl(remoteDataSource: Get.find()),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut(
       () => UploadFileUseCase(Get.find<FileStorageRepository>()),
       fenix: true,
@@ -461,23 +419,58 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
 
-    /// 9. CONNECTIVITY USECASES
+    /// 6. CONNECTIVITY
+    // ***** datasource *****
+    Get.lazyPut<ConnectivityRemoteDataSource>(
+          () => ConnectivityRemoteDataSourceImpl(Get.find()),
+    );
+    // ***** repository *****
     Get.lazyPut<ConnectivityRepository>(
       () => ConnectivityRepositoryImpl(Get.find()),
     );
-
+    // ***** usecases *****
     Get.lazyPut(() => CheckConnectionUseCase(Get.find()));
 
     Get.lazyPut(() => WatchConnectionUseCase(Get.find()));
 
-    /// 10. SEARCH USECASES
+    /// 7. SEARCH
+    // ***** datasource *****
+    Get.lazyPut<SearchRemoteDataSource<PostModel>>(
+          () =>
+          SearchRemoteDataSourceImpl<PostModel>(Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<SearchRepository<PostModel>>(
+          () =>
+          SearchRepositoryImpl<PostModel>(
+            remoteDataSource: Get.find<SearchRemoteDataSource<PostModel>>(),
+            collection: 'posts',
+            searchField: 'title',
+            fromFirestore: PostModel.fromFirestore,
+          ),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut<SearchUseCase<PostModel>>(
           () =>
           SearchUseCase<PostModel>(Get.find<SearchRepository<PostModel>>()),
       fenix: true,
     );
 
-    /// 11. QUERY USECASES
+    /// 8. FIRESTORE QUERY
+    // ***** datasource *****
+    Get.lazyPut<FirestoreQueryRemoteDataSource>(
+          () =>
+          FirestoreQueryRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<FirestoreQueryRepository>(
+          () => FirestoreQueryRepositoryImpl(remoteDataSource: Get.find()),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut(
           () => ExecuteQueryUseCase(Get.find<FirestoreQueryRepository>()),
       fenix: true,
@@ -487,64 +480,333 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
 
-    /// 12. BATCH USECASES
+    /// 9. FIRESTORE BATCH
+    // ***** datasource *****
+    Get.lazyPut<FirestoreBatchRemoteDataSource>(
+          () =>
+          FirestoreBatchRemoteDataSourceImpl(Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+    // ***** repository *****
+    Get.lazyPut<FirestoreBatchRepository>(
+          () => FirestoreBatchRepositoryImpl(remoteDataSource: Get.find()),
+      fenix: true,
+    );
+    // ***** usecases *****
     Get.lazyPut(
           () => CommitBatchUseCase(Get.find<FirestoreBatchRepository>()),
       fenix: true,
     );
-
     Get.lazyPut(
           () => RunTransactionUseCase(Get.find<FirestoreBatchRepository>()),
       fenix: true,
     );
 
-    /// 13. CONTROLLERS
+
+    /// 10. FIRESTORE PAGINATION
+    Get.lazyPut<FirestorePaginationRemoteDataSource>(
+          () =>
+          FirestorePaginationRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ),
+      fenix: true,
+    );
+
+    Get.lazyPut<FirestorePaginationRepository>(
+          () =>
+          FirestorePaginationRepositoryImpl(
+            Get.find<FirestorePaginationRemoteDataSource>(),
+          ),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () => LoadPageUseCase(Get.find<FirestorePaginationRepository>()),
+      fenix: true,
+    );
+
+    /// 11. FIRESTORE LISTENER
+    Get.lazyPut<FirestoreListenerRemoteDataSource>(
+          () =>
+              FirestoreListenerRemoteDataSourceImpl(
+                  Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<FirestoreListenerRepository>(
+          () =>
+          FirestoreListenerRepositoryImpl(
+            Get.find<FirestoreListenerRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(
+          () => ListenQueryUseCase(Get.find<FirestoreListenerRepository>()),
+      fenix: true,
+    );
+
+    /// 12. FIRESTORE AGGREGATE
+
+    Get.lazyPut<FirestoreAggregateRemoteDataSource>(
+          () =>
+              FirestoreAggregateRemoteDataSourceImpl(
+                  Get.find<FirebaseFirestore>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<FirestoreAggregateRepository>(
+          () =>
+          FirestoreAggregateRepositoryImpl(
+            Get.find<FirestoreAggregateRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(
+          () => CountQueryUseCase(Get.find<FirestoreAggregateRepository>()),
+      fenix: true,
+    );
+
+    /// 13. FIRESTORE COLLECTION GROUP
+    Get.lazyPut<FirestoreCollectionGroupRemoteDataSource>(
+          () =>
+          FirestoreCollectionGroupRemoteDataSourceImpl(
+            Get.find<FirebaseFirestore>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut<FirestoreCollectionGroupRepository>(
+          () =>
+          FirestoreCollectionGroupRepositoryImpl(
+            Get.find<FirestoreCollectionGroupRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+          ExecuteCollectionGroupQueryUseCase(
+            Get.find<FirestoreCollectionGroupRepository>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+          WatchCollectionGroupQueryUseCase(
+            Get.find<FirestoreCollectionGroupRepository>(),
+          ), fenix: true,
+    );
+
+    /// 14. FIRESTORE REMOTE CONFIG
+    Get.lazyPut<RemoteConfigRemoteDataSource>(
+          () => RemoteConfigRemoteDataSourceImpl(FirebaseRemoteConfig.instance),
+      fenix: true,
+    );
+
+    Get.lazyPut<RemoteConfigRepository>(
+          () =>
+              RemoteConfigRepositoryImpl(
+                  Get.find<RemoteConfigRemoteDataSource>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(() => FetchUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => ActivateUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => FetchAndActivateUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => GetStringUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => GetBoolUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => GetIntUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => GetDoubleUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => SetDefaultsUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => SetSettingsUseCase(Get.find()), fenix: true,);
+
+    /// 15. FIRESTORE FUNCTIONS
+
+    Get.lazyPut<FirebaseFunctionsRemoteDataSource>(
+          () => FirebaseFunctionsRemoteDataSourceImpl(), fenix: true,
+    );
+
+    Get.lazyPut<FirebaseFunctionsRepository>(
+          () =>
+          FirebaseFunctionsRepositoryImpl(
+            Get.find<FirebaseFunctionsRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(
+          () => CallFunctionUseCase(Get.find<FirebaseFunctionsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+              CallRegionFunctionUseCase(
+                  Get.find<FirebaseFunctionsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+              CallTimeoutFunctionUseCase(
+                  Get.find<FirebaseFunctionsRepository>()),
+      fenix: true,
+    );
+
+    /// 16. FIRESTORE CRASHLYTICS
+    Get.lazyPut<CrashlyticsRemoteDataSource>(
+          () => const CrashlyticsRemoteDataSourceImpl(), fenix: true,
+    );
+
+    Get.lazyPut<FirebaseCrashlyticsRepository>(
+          () =>
+          FirebaseCrashlyticsRepositoryImpl(
+            Get.find<CrashlyticsRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(() => LogUseCase(Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,);
+
+    Get.lazyPut(
+          () => RecordErrorUseCase(Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+              RecordFlutterErrorUseCase(
+                  Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () => SetUserIdUseCase(Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () => SetCustomKeyUseCase(Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () => SetCustomKeysUseCase(Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut(
+          () =>
+              EnableCollectionUseCase(
+                  Get.find<FirebaseCrashlyticsRepository>()),
+      fenix: true,
+    );
+
+    /// 17. FIRESTORE ANALYTICS
+    Get.lazyPut<AnalyticsRemoteDataSource>(
+          () => const AnalyticsRemoteDataSourceImpl(), fenix: true,
+    );
+
+    Get.lazyPut<FirebaseAnalyticsRepository>(
+          () =>
+          FirebaseAnalyticsRepositoryImpl(
+            Get.find<AnalyticsRemoteDataSource>(),
+          ), fenix: true,
+    );
+
+    Get.lazyPut(() => LogEventUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => SetUserIdUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => SetUserPropertyUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => LogLoginUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => LogSignUpUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => LogScreenViewUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => ResetAnalyticsDataUseCase(Get.find()), fenix: true,);
+    Get.lazyPut(() => SetCollectionEnabledUseCase(Get.find()), fenix: true,);
+
+    /// 18. FIRESTORE APP CHECK
+    Get.lazyPut<AppCheckRemoteDataSource>(
+          () => const AppCheckRemoteDataSourceImpl(), fenix: true,
+    );
+
+    Get.lazyPut<FirebaseAppCheckRepository>(
+          () =>
+              FirebaseAppCheckRepositoryImpl(
+                  Get.find<AppCheckRemoteDataSource>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<ActivateAppCheckUseCase>(
+          () => ActivateAppCheckUseCase(Get.find<FirebaseAppCheckRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<GetAppCheckTokenUseCase>(
+          () => GetAppCheckTokenUseCase(Get.find<FirebaseAppCheckRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<GetLimitedUseTokenUseCase>(
+          () =>
+              GetLimitedUseTokenUseCase(Get.find<FirebaseAppCheckRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<SetTokenAutoRefreshUseCase>(
+          () =>
+              SetTokenAutoRefreshUseCase(
+                  Get.find<FirebaseAppCheckRepository>()),
+      fenix: true,
+    );
+
+    /// 19. CONTROLLERS
     Get.lazyPut<AuthController>(
-      () => AuthController(
-        signInWithEmailUseCase: Get.find<SignInWithEmailUseCase>(),
-        signInWithGoogleUseCase: Get.find<SignInWithGoogleUseCase>(),
-        signUpWithEmailUseCase: Get.find<SignUpWithEmailUseCase>(),
-        checkEmailVerificationUseCase:
+          () =>
+          AuthController(
+            signInWithEmailUseCase: Get.find<SignInWithEmailUseCase>(),
+            signInWithGoogleUseCase: Get.find<SignInWithGoogleUseCase>(),
+            signUpWithEmailUseCase: Get.find<SignUpWithEmailUseCase>(),
+            checkEmailVerificationUseCase:
             Get.find<CheckEmailVerificationUseCase>(),
-        resendVerificationEmailUseCase:
+            resendVerificationEmailUseCase:
             Get.find<ResendVerificationEmailUseCase>(),
-        logoutUseCase: Get.find<LogoutUseCase>(),
-        changePasswordUseCase: Get.find<ChangePasswordUseCase>(),
-        deleteAccountUseCase: Get.find<DeleteAccountUseCase>(),
-        authRepository: Get.find<AuthRepository>(),
-        ensureUserProfileUseCase: Get.find<EnsureUserProfileUseCase>(),
-        sendPasswordResetEmailUseCase:
-        Get.find<SendPasswordResetEmailUseCase>(),
-        sendPhoneReauthOtpUseCase: Get.find<SendPhoneReauthOtpUseCase>(),
-        reauthenticateWithPhoneOtpUseCase: Get.find<
-            ReauthenticateWithPhoneOtpUseCase>(),
-      ),
+            logoutUseCase: Get.find<LogoutUseCase>(),
+            changePasswordUseCase: Get.find<ChangePasswordUseCase>(),
+            deleteAccountUseCase: Get.find<DeleteAccountUseCase>(),
+            authRepository: Get.find<AuthRepository>(),
+            ensureUserProfileUseCase: Get.find<EnsureUserProfileUseCase>(),
+            sendPasswordResetEmailUseCase:
+            Get.find<SendPasswordResetEmailUseCase>(),
+            sendPhoneReauthOtpUseCase: Get.find<SendPhoneReauthOtpUseCase>(),
+            reauthenticateWithPhoneOtpUseCase:
+            Get.find<ReauthenticateWithPhoneOtpUseCase>(),
+          ),
 
       fenix: true,
     );
 
     Get.lazyPut<PhoneAuthController>(
-      () => PhoneAuthController(
-        sendPhoneOtpUseCase: Get.find<SendPhoneOtpUseCase>(),
-        verifyPhoneOtpUseCase: Get.find<VerifyPhoneOtpUseCase>(),
-      ),
+          () =>
+          PhoneAuthController(
+            sendPhoneOtpUseCase: Get.find<SendPhoneOtpUseCase>(),
+            verifyPhoneOtpUseCase: Get.find<VerifyPhoneOtpUseCase>(),
+          ),
       fenix: true,
     );
 
     Get.lazyPut<CompleteProfileController>(
-      () => CompleteProfileController(
-        completeProfileUseCase: Get.find(),
-        saveUserProfileUseCase: Get.find(),
-        authRepository: Get.find(),
-      ),
+          () =>
+          CompleteProfileController(
+            completeProfileUseCase: Get.find(),
+            saveUserProfileUseCase: Get.find(),
+            authRepository: Get.find(),
+          ),
       fenix: true,
     );
     Get.lazyPut<ProfileController>(
-      () => ProfileController(
-        getUserProfileUseCase: Get.find<GetUserProfileUseCase>(),
-        authRepository: Get.find<AuthRepository>(),
-        updateProfileUseCase: Get.find(),
-      ),
+          () =>
+          ProfileController(
+            getUserProfileUseCase: Get.find<GetUserProfileUseCase>(),
+            authRepository: Get.find<AuthRepository>(),
+            updateProfileUseCase: Get.find(),
+            completeProfileUseCase: Get.find(),
+          ),
       fenix: true,
     );
     Get.put<AuthSessionController>(
@@ -568,23 +830,25 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.lazyPut(
-      () => PostController(
-        addPostUseCase: Get.find(),
-        updatePostUseCase: Get.find(),
-        deletePostUseCase: Get.find(),
-        getPostsUseCase: Get.find(),
-        watchPostsUseCase: Get.find(),
-      ),
+          () =>
+          PostController(
+            addPostUseCase: Get.find(),
+            updatePostUseCase: Get.find(),
+            deletePostUseCase: Get.find(),
+            getPostsUseCase: Get.find(),
+            watchPostsUseCase: Get.find(),
+          ),
       fenix: true,
     );
 
     Get.lazyPut(
-      () => PaginatedPostController(
-        getPaginatedPostsUseCase: Get.find(),
-        addPostUseCase: Get.find(),
-        updatePostUseCase: Get.find(),
-        deletePostUseCase: Get.find(),
-      ),
+          () =>
+          PaginatedPostController(
+            getPaginatedPostsUseCase: Get.find(),
+            addPostUseCase: Get.find(),
+            updatePostUseCase: Get.find(),
+            deletePostUseCase: Get.find(),
+          ),
       fenix: true,
     );
 
@@ -595,294 +859,5 @@ class InitialBinding extends Bindings {
           ),
       fenix: true,
     );
-
-    /// 15. FIRESTORE PAGINATION
-    Get.lazyPut<FirestorePaginationRemoteDataSource>(
-          () =>
-          FirestorePaginationRemoteDataSourceImpl(
-            Get.find<FirebaseFirestore>(),
-          ),
-    );
-
-    Get.lazyPut<FirestorePaginationRepository>(
-          () =>
-          FirestorePaginationRepositoryImpl(
-            Get.find<FirestorePaginationRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          LoadPageUseCase(
-            Get.find<FirestorePaginationRepository>(),
-          ),
-    );
-
-    /// 16. FIRESTORE LISTENER
-    Get.lazyPut<FirestoreListenerRemoteDataSource>(
-          () =>
-          FirestoreListenerRemoteDataSourceImpl(
-            Get.find<FirebaseFirestore>(),
-          ),
-    );
-
-    Get.lazyPut<FirestoreListenerRepository>(
-          () =>
-          FirestoreListenerRepositoryImpl(
-            Get.find<FirestoreListenerRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          ListenQueryUseCase(
-            Get.find<FirestoreListenerRepository>(),
-          ),
-    );
-
-
-    /// 16. FIRESTORE AGGREGATE
-
-    Get.lazyPut<FirestoreAggregateRemoteDataSource>(
-          () =>
-          FirestoreAggregateRemoteDataSourceImpl(
-            Get.find<FirebaseFirestore>(),
-          ),
-    );
-
-    Get.lazyPut<FirestoreAggregateRepository>(
-          () =>
-          FirestoreAggregateRepositoryImpl(
-            Get.find<FirestoreAggregateRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          CountQueryUseCase(
-            Get.find<FirestoreAggregateRepository>(),
-          ),
-    );
-
-    /// 17. FIRESTORE COLLECTION GROUP
-    Get.lazyPut<FirestoreCollectionGroupRemoteDataSource>(
-          () =>
-          FirestoreCollectionGroupRemoteDataSourceImpl(
-            Get.find<FirebaseFirestore>(),
-          ),
-    );
-
-    Get.lazyPut<FirestoreCollectionGroupRepository>(
-          () =>
-          FirestoreCollectionGroupRepositoryImpl(
-            Get.find<FirestoreCollectionGroupRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          ExecuteCollectionGroupQueryUseCase(
-            Get.find<FirestoreCollectionGroupRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          WatchCollectionGroupQueryUseCase(
-            Get.find<FirestoreCollectionGroupRepository>(),
-          ),
-    );
-
-    /// 18. FIRESTORE REMOTE CONFIG
-    Get.lazyPut<RemoteConfigRemoteDataSource>(
-          () =>
-          RemoteConfigRemoteDataSourceImpl(
-            FirebaseRemoteConfig.instance,
-          ),
-    );
-
-    Get.lazyPut<RemoteConfigRepository>(
-          () =>
-          RemoteConfigRepositoryImpl(
-            Get.find<RemoteConfigRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(() => FetchUseCase(Get.find()));
-    Get.lazyPut(() => ActivateUseCase(Get.find()));
-    Get.lazyPut(() => FetchAndActivateUseCase(Get.find()));
-    Get.lazyPut(() => GetStringUseCase(Get.find()));
-    Get.lazyPut(() => GetBoolUseCase(Get.find()));
-    Get.lazyPut(() => GetIntUseCase(Get.find()));
-    Get.lazyPut(() => GetDoubleUseCase(Get.find()));
-    Get.lazyPut(() => SetDefaultsUseCase(Get.find()));
-    Get.lazyPut(() => SetSettingsUseCase(Get.find()));
-
-
-    /// 19. FIRESTORE FUNCTIONS
-
-    Get.lazyPut<FirebaseFunctionsRemoteDataSource>(
-          () => FirebaseFunctionsRemoteDataSourceImpl(),
-    );
-
-    Get.lazyPut<FirebaseFunctionsRepository>(
-          () =>
-          FirebaseFunctionsRepositoryImpl(
-            Get.find<FirebaseFunctionsRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          CallFunctionUseCase(
-            Get.find<FirebaseFunctionsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          CallRegionFunctionUseCase(
-            Get.find<FirebaseFunctionsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          CallTimeoutFunctionUseCase(
-            Get.find<FirebaseFunctionsRepository>(),
-          ),
-    );
-
-
-    /// 20. FIRESTORE CRASHLYTICS
-    Get.lazyPut<CrashlyticsRemoteDataSource>(
-          () => const CrashlyticsRemoteDataSourceImpl(),
-    );
-
-    Get.lazyPut<FirebaseCrashlyticsRepository>(
-          () =>
-          FirebaseCrashlyticsRepositoryImpl(
-            Get.find<CrashlyticsRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          LogUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          RecordErrorUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          RecordFlutterErrorUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          SetUserIdUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          SetCustomKeyUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          SetCustomKeysUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-    Get.lazyPut(
-          () =>
-          EnableCollectionUseCase(
-            Get.find<FirebaseCrashlyticsRepository>(),
-          ),
-    );
-
-
-    /// 21. FIRESTORE ANALYTICS
-    Get.lazyPut<AnalyticsRemoteDataSource>(
-          () => const AnalyticsRemoteDataSourceImpl(),
-    );
-
-    Get.lazyPut<FirebaseAnalyticsRepository>(
-          () =>
-          FirebaseAnalyticsRepositoryImpl(
-            Get.find<AnalyticsRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut(() => LogEventUseCase(Get.find()));
-    Get.lazyPut(() => SetUserIdUseCase(Get.find()));
-    Get.lazyPut(() => SetUserPropertyUseCase(Get.find()));
-    Get.lazyPut(() => LogLoginUseCase(Get.find()));
-    Get.lazyPut(() => LogSignUpUseCase(Get.find()));
-    Get.lazyPut(() => LogScreenViewUseCase(Get.find()));
-    Get.lazyPut(() => ResetAnalyticsDataUseCase(Get.find()));
-    Get.lazyPut(() => SetCollectionEnabledUseCase(Get.find()));
-
-    /// 22. FIRESTORE APP CHECK
-    Get.lazyPut<AppCheckRemoteDataSource>(
-          () => const AppCheckRemoteDataSourceImpl(),
-    );
-
-    Get.lazyPut<FirebaseAppCheckRepository>(
-          () =>
-          FirebaseAppCheckRepositoryImpl(
-            Get.find<AppCheckRemoteDataSource>(),
-          ),
-    );
-
-    Get.lazyPut<ActivateAppCheckUseCase>(
-          () =>
-          ActivateAppCheckUseCase(
-            Get.find<FirebaseAppCheckRepository>(),
-          ),
-    );
-
-    Get.lazyPut<GetAppCheckTokenUseCase>(
-          () =>
-          GetAppCheckTokenUseCase(
-            Get.find<FirebaseAppCheckRepository>(),
-          ),
-    );
-
-    Get.lazyPut<GetLimitedUseTokenUseCase>(
-          () =>
-          GetLimitedUseTokenUseCase(
-            Get.find<FirebaseAppCheckRepository>(),
-          ),
-    );
-
-    Get.lazyPut<SetTokenAutoRefreshUseCase>(
-          () =>
-          SetTokenAutoRefreshUseCase(
-            Get.find<FirebaseAppCheckRepository>(),
-          ),
-    );
   }
 }
-
-
-
-
-
-
-
-

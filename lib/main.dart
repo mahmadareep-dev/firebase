@@ -70,6 +70,15 @@ class AuthSessionView extends GetView<AuthSessionController> {
 
         case AuthSessionStatus.authenticated:
           return const HomeScreen();
+        case AuthSessionStatus.error:
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                'Something went wrong. Please try again.',
+              ),
+            ),
+          );
+
       }
     });
   }

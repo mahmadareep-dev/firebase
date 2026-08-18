@@ -82,6 +82,7 @@ class AuthController extends GetxController {
   final RxBool isVerifyingPhoneReauthOtp = false.obs;
 
   String? phoneReauthVerificationId;
+
   AuthUserEntity? get currentUser => authRepository.currentUser;
 
   String get currentUserName => currentUser?.displayName ?? '';
@@ -405,7 +406,6 @@ class AuthController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 2),
       );
-
       // Give the user time to see the success message.
       await Future.delayed(const Duration(milliseconds: 1200));
 
@@ -433,6 +433,14 @@ class AuthController extends GetxController {
       return;
     }
 
+    /// PHONE ACCOUNT
+    // Phone users must re-authenticate with OTP before deletion.
+    if (user.isPhoneUser) {
+      await sendPhoneReauthOtp();
+      return;
+    }
+
+    /// EMAIL/PASSWORD ACCOUNT
     final bool isPasswordUser = user.isPasswordUser;
     final String password = currentPasswordController.text.trim();
 
@@ -496,6 +504,7 @@ class AuthController extends GetxController {
       ),
     );
   }
+
   Future<void> sendPhoneReauthOtp() async {
     final user = currentUser;
 
@@ -538,7 +547,61 @@ class AuthController extends GetxController {
     } finally {
       isSendingPhoneReauthOtp.value = false;
     }
-  }Future<void> verifyPhoneReauthOtp() async {
+  }
+
+  void _showPhoneReauthOtpDialog() {
+    phoneReauthOtpController.clear();
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Verify Phone Number'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter the OTP sent to $currentPhone'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneReauthOtpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'OTP',
+                prefixIcon: Icon(Icons.sms_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: isVerifyingPhoneReauthOtp.value
+                ? null
+                : () {
+                    phoneReauthOtpController.clear();
+                    Get.back();
+                  },
+            child: const Text('Cancel'),
+          ),
+          Obx(
+            () => ElevatedButton(
+              onPressed: isVerifyingPhoneReauthOtp.value
+                  ? null
+                  : verifyPhoneReauthOtp,
+              child: isVerifyingPhoneReauthOtp.value
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Verify & Delete'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> verifyPhoneReauthOtp() async {
     final verificationId = phoneReauthVerificationId;
     final smsCode = phoneReauthOtpController.text.trim();
 
@@ -570,12 +633,15 @@ class AuthController extends GetxController {
     } finally {
       isVerifyingPhoneReauthOtp.value = false;
     }
-  }Future<void> _deleteAccountAfterReauthentication() async {
+  }
+
+  Future<void> _deleteAccountAfterReauthentication() async {
     try {
       isDeletingAccount.value = true;
 
       await deleteAccountUseCase(
         currentPassword: null,
+        alreadyReauthenticated: true,
       );
 
       clearAccountForm();
@@ -602,60 +668,6 @@ class AuthController extends GetxController {
     } finally {
       isDeletingAccount.value = false;
     }
-  }void _showPhoneReauthOtpDialog() {
-    phoneReauthOtpController.clear();
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Verify Phone Number'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter the OTP sent to $currentPhone',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: phoneReauthOtpController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'OTP',
-                prefixIcon: Icon(Icons.sms_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: isVerifyingPhoneReauthOtp.value
-                ? null
-                : () {
-              phoneReauthOtpController.clear();
-              Get.back();
-            },
-            child: const Text('Cancel'),
-          ),
-          Obx(
-                () => ElevatedButton(
-              onPressed: isVerifyingPhoneReauthOtp.value
-                  ? null
-                  : verifyPhoneReauthOtp,
-              child: isVerifyingPhoneReauthOtp.value
-                  ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                ),
-              )
-                  : const Text('Verify & Delete'),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

@@ -4,4 +4,5 @@ enum AuthSessionStatus {
   emailUnverified,
   profileIncomplete,
   authenticated,
+  error,
 }

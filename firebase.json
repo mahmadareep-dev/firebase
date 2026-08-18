@@ -1,1 +1,37 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fir-learning-1963d","appId":"1:1038991165469:android:adeea87d31500c89bc1ef4","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fir-learning-1963d","configurations":{"android":"1:1038991165469:android:adeea87d31500c89bc1ef4"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fir-learning-1963d",
+          "appId": "1:1038991165469:android:adeea87d31500c89bc1ef4",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fir-learning-1963d",
+          "configurations": {
+            "android": "1:1038991165469:android:adeea87d31500c89bc1ef4"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "port": 8080
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

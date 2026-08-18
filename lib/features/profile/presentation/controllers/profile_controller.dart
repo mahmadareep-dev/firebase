@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/services/file_picker/file_picker_service.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/domain/usecases/complete_profile_usecase.dart';
 import '../../../file_storage/file_storage.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/get_user_profile_usecase.dart';
@@ -15,13 +16,14 @@ class ProfileController extends BaseController {
   final GetUserProfileUseCase getUserProfileUseCase;
   final AuthRepository authRepository;
   final UpdateProfileUseCase updateProfileUseCase;
+  final CompleteProfileUseCase completeProfileUseCase;
 
   ProfileController({
     required this.authRepository,
     required this.getUserProfileUseCase,
     required this.updateProfileUseCase,
+    required this.completeProfileUseCase,
   });
-
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
@@ -33,6 +35,7 @@ class ProfileController extends BaseController {
   final isUploadingImage = false.obs;
   final Rxn<UserEntity> user = Rxn<UserEntity>();
   final FirebaseStorageBuilder storage = FirebaseStorageBuilder();
+
   @override
   void onInit() {
     super.onInit();
@@ -88,7 +91,14 @@ class ProfileController extends BaseController {
       return;
     }
 
-    if (nameController.text.trim().isEmpty) {
+    // Capture form values BEFORE any async operation.
+    final newName = nameController.text.trim();
+    final newEmail = emailController.text.trim();
+    final newPhone = phoneController.text.trim();
+    final currentPhotoUrl = user.value?.photoUrl ?? '';
+    final currentRole = selectedRole.value;
+
+    if (newName.isEmpty) {
       Get.snackbar(
         'Validation',
         'Please enter your name',
@@ -97,7 +107,7 @@ class ProfileController extends BaseController {
       return;
     }
 
-    if (emailController.text.trim().isEmpty) {
+    if (newEmail.isEmpty) {
       Get.snackbar(
         'Validation',
         'Please enter your email',
@@ -106,7 +116,7 @@ class ProfileController extends BaseController {
       return;
     }
 
-    if (phoneController.text.trim().isEmpty) {
+    if (newPhone.isEmpty) {
       Get.snackbar(
         'Validation',
         'Please enter your phone number',
@@ -118,13 +128,17 @@ class ProfileController extends BaseController {
     isUpdating.value = true;
 
     try {
+      // Update Firebase Authentication.
+      await completeProfileUseCase(name: newName, photoUrl: currentPhotoUrl);
+
+      // Use the captured values.
       final updatedUser = UserEntity(
         uid: firebaseUser.uid,
-        name: nameController.text.trim(),
-        email: emailController.text.trim(),
-        phone: phoneController.text.trim(),
-        photoUrl: user.value?.photoUrl ?? '',
-        role: selectedRole.value,
+        name: newName,
+        email: newEmail,
+        phone: newPhone,
+        photoUrl: currentPhotoUrl,
+        role: currentRole,
         createdAt: user.value?.createdAt,
         updatedAt: DateTime.now(),
       );
@@ -185,6 +199,10 @@ class ProfileController extends BaseController {
 
       await uploadResult.when(
         success: (uploadedFile) async {
+          await completeProfileUseCase(
+            name: nameController.text.trim(),
+            photoUrl: uploadedFile.downloadUrl,
+          );
           final updatedUser = UserEntity(
             uid: firebaseUser.uid,
             name: nameController.text.trim(),

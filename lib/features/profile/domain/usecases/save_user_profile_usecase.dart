@@ -1,3 +1,5 @@
+import 'package:firebase/core/errors/result.dart';
+
 import '../entities/user_entity.dart';
 import '../repositories/profile_repository.dart';
 
@@ -6,7 +8,7 @@ class SaveUserProfileUseCase {
 
   SaveUserProfileUseCase(this.repository);
 
-  Future<void> call(UserEntity user) {
+  Future<Result<void>> call(UserEntity user) {
     return repository.saveProfile(user);
   }
 }

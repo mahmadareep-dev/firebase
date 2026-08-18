@@ -22,6 +22,12 @@ class PostsScreen extends GetView<PostController> {
           //   onPressed: (){}
           // ),
           IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'Test Batch Delete',
+            onPressed: controller.testBatchAtomicity,
+            //  onPressed: controller.testBatchDelete,
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
               Get.to(

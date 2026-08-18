@@ -160,10 +160,6 @@ class ProfileScreen extends StatelessWidget {
     final authController = Get.find<AuthController>();
     final profileController = Get.find<ProfileController>();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      profileController.refreshProfile();
-    });
-
     return Scaffold(
       appBar: AppBar(title: const Text("My Profile"), centerTitle: true),
       body: Obx(() {
